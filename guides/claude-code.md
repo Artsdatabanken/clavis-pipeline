@@ -50,6 +50,10 @@ Validated on Claude Opus 5.5 (full rodent run, 1 October 2026) with the pipeline
 
 Vision matters: the digitizer reads page images directly to catch the labels around figures that OCR drops. All current Claude models have it.
 
+### Haiku: tested, not used
+
+On 2 October 2026 one book (Gibson, 24 species) was harvested by Haiku 4.5 and by Sonnet 5.5 with identical inputs and instructions. Haiku: 298 claims, 61 quotes not in the book, 12% of the book's words quoted, none of the structured fields filled (numbers, diagnostic traits, comparisons), "usually" on almost every claim, and claims for a species the book does not describe. Sonnet: 584 claims, every quote found, 39% of the words quoted, all fields used. Saving: USD 1.30 per book. Harvesting is the simplest model job in the pipeline, so Haiku is not used for any agent.
+
 ## Cost and time
 
 Measured, 1 October 2026, Rodentia for Norway, 29 species on the list, 24 covered, five scanned books plus one transcoded matrix key, Claude Opus 5.5 for the agents: 93 minutes wall-clock, 25 agent transcripts, 1681 model calls, 229 M cache-read tokens, 12.8 M cache-write tokens, 111 k output tokens, about USD 120 at list prices (`tools/token_report.py`). Roughly USD 5 per covered species, almost all of it input re-read from cache across the per-taxon harvest and per-source digitize and audit agents. The cuts listed in `TODO.md` target exactly that.
