@@ -40,6 +40,17 @@ Single steps by name: "audit key.json against its claims", "merge these three ke
 
 **Opus runs the job, Sonnet does every agent's work.** Start Claude Code in this folder with Claude Opus 5.5 (`claude-opus-5-5`) as the session model; `.claude/settings.json` (`CLAUDE_CODE_SUBAGENT_MODEL=sonnet`, `CLAUDE_CODE_SUBAGENT_MODEL_FORCE=1`) puts every sub-agent on Claude Sonnet 5.5 (`claude-sonnet-5-5`), and the agent files say `model: sonnet` as well. A sub-agent with no model set would otherwise run on the session's model. The orchestrator is where the judgment sits (page ranges, whether a harvester's "cannot be told apart" is what the book says, scripts that break on real data); the agents follow skills with checklists and scripts behind them.
 
+### Models tested
+
+All in Claude Code, October 2026, on the same job.
+
+| Model | API id | Role tested | Verdict |
+|---|---|---|---|
+| Claude Opus 5.5 | `claude-opus-5-5` | running the job; all agents | best for running the job; as the agent model no better than Sonnet at three to five times the cost |
+| Claude Sonnet 5.5 | `claude-sonnet-5-5` | all agents; running the job | the agent model; running the job on its own it made content mistakes (undid a correct look-alike rule, skipped confirming section pages) that cost two species pairs |
+| Claude Haiku 4.5 | `claude-haiku-4-5-20251001` | harvester, one book, identical inputs to a Sonnet harvester | not usable: about half the claims, a fifth of its quotes not in the book, 12% of the book's words quoted against Sonnet's 39%, none of the structured fields filled, "usually" on almost every claim, claims for a species the book does not describe. Harvesting is the simplest model job in the pipeline, so Haiku is not used for any agent |
+| Claude Fable 5.1 | `claude-fable-5-1` | not chosen; one sub-agent fell back to it once because no model was set | far more expensive per token than Opus, with nothing in this pipeline that needs it; the model settings above now prevent the fallback |
+
 ## Tokens and cost
 
 Measured with this setup, October 2026, as logged by Claude Code (`tools/token_report.py`; it also writes `tokens.md` at the end of every run). Output counts in the transcripts look incomplete; Claude Code's `/cost` screen is authoritative for output. Input dominates the cost regardless: every call re-reads the agent's context from the cache.

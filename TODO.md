@@ -13,7 +13,7 @@ State on 2 October 2026, after five full runs on the Norwegian rodents and three
 - A trait one species has and the others are not known to have (no statement either way) is removed at the end; with a known absence it stays.
 - No words of any language in the scripts: meaning comes from fields the harvester sets (`qualifier`, `values`, `value_num`, `unit`, `diagnostic`, `same_as`) and from `"location": true` in the merge spec.
 - The claims are checked against the books (every quote verbatim, every unquoted stretch decided by the auditor), the key against the claims, the merged key against every source.
-- Models: Opus 5.5 orchestrating, Sonnet 5.5 for every agent. The final gates stay with the orchestrator: they are scripts; a separate agent would only re-run them.
+- Models: Opus 5.5 orchestrating, Sonnet 5.5 for every agent. Haiku 4.5 tested as harvester and not usable; Fable 5.1 not used (cost). The final gates stay with the orchestrator: they are scripts; a separate agent would only re-run them.
 - Script fixes are checked by a Sonnet agent on an existing run's files, not by a new full run; full runs only for changes in the rules that build the key.
 
 ## Open

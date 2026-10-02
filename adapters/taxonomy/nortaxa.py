@@ -24,7 +24,12 @@ def _get(url):
 def _by_name(scientific_name):
     j = _get(f"{BASE}/ScientificName?scientificName={urllib.parse.quote(scientific_name)}")
     if isinstance(j, list):
-        j = j[0] if j else {}
+        # A name can be both an accepted name and a synonym (homonyms with different
+        # authors, e.g. Alcyonidium gelatinosum (L.) accepted and A. gelatinosum Marcus
+        # a synonym of A. diaphanum); the accepted record wins, never the first one.
+        acc = [r for r in j if (r.get("taxonomicStatus") or "").lower() == "accepted"
+               and (r.get("scientificName") or "").lower() == scientific_name.lower()]
+        j = acc[0] if len(acc) == 1 else (j[0] if j else {})
     return j or {}
 
 

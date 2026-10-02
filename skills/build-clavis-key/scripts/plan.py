@@ -56,7 +56,7 @@ def main() -> int:
     a = ap.parse_args()
     S = a.sources.resolve(); W = S / "work"; B = W / "briefs"; D = S / "leveranse"
     B.mkdir(parents=True, exist_ok=True)
-    pdfs = sorted(S.glob("*.pdf")) + sorted(S.glob("*.PDF"))
+    pdfs = sorted(S.glob("*.pdf")) + sorted(S.glob("*.PDF")) + sorted(S.glob("*.docx"))
     keys_in = [p for p in sorted(S.glob("*.json")) if p.name not in ("pages.json",)]
     srcs = {slug(p): p for p in pdfs}
     inv = INVARIANT.format(repo=REPO)
@@ -74,12 +74,19 @@ def main() -> int:
         print("Phase 0: prepare each source (run these, then plan.py again):")
         for s, p in srcs.items():
             w = W / s; w.mkdir(exist_ok=True)
-            if not (w / "source.pdf").exists():
-                (w / "source.pdf").symlink_to(p.resolve())   # source_coverage.py and the gates read the book from here
-            print(f'  pdftotext -layout "{p}" "{w}/full.txt"')
+            docx = p.suffix.lower() == ".docx"
+            if docx:   # Word: text from the standard-library converter; no PDF, no figures (embedded images are not extracted)
+                print(f'  {py} {REPO}/tools/docx_to_text.py "{p}" "{w}/full.txt" --page-every 40')
+            else:
+                if not (w / "source.pdf").exists():
+                    (w / "source.pdf").symlink_to(p.resolve())   # source_coverage.py and the gates read the book from here
+                print(f'  pdftotext -layout "{p}" "{w}/full.txt"')
             print(f'  {py} {H}/taxon_names.py "{a.taxa}" --lang {a.lang} --out "{W}/names.json"')
-            print(f'  {py} {H}/find_sections.py "{w}/full.txt" --taxa "{a.taxa}" --names "{W}/names.json" --pdf "{p}" --out "{w}/"')
-            print(f'  {py} {H}/find_figures.py "{p}" --pages <section from {w}/pages.json> --text "{w}/full.txt" --out "{w}/figures.json" --render "{w}/figures/"')
+            print(f'  {py} {H}/find_sections.py "{w}/full.txt" --taxa "{a.taxa}" --names "{W}/names.json"' + ("" if docx else f' --pdf "{p}"') + f' --out "{w}/"')
+            if docx:
+                print(f"  echo '[]' > \"{w}/figures.json\"")
+            else:
+                print(f'  {py} {H}/find_figures.py "{p}" --pages <section from {w}/pages.json> --text "{w}/full.txt" --out "{w}/figures.json" --render "{w}/figures/"')
             print(f"  then read the first and last page of the section in {w}/section.txt and confirm or adjust (--pages-override).")
         for k in keys_in:
             print(f"  Clavis source {k.name}: refine-clavis-key then audit-clavis-key (structural phases), output under {W}/{slug(k)}/")
@@ -109,7 +116,7 @@ def main() -> int:
         keys = [k for k in w.glob(f"{s}.*.json") if ".audited" not in k.name and "design" not in k.name]
         if keys and not list(w.glob(f"{s}.*.audited.json")):
             todo.append(brief(f"audit-{s}", "audit-clavis-key", "clavis-auditor",
-                              f"Key: {keys[0]}\nClaims: {w}/claims.jsonl\nProvenance: {w}/provenance.jsonl\nSkipped: {w}/skipped.jsonl\nDesign: {w}/design.json\nDecisions: {w}/decisions.md\nSource text: {w}/full.txt, pages {w}/pages.json, book {w}/source.pdf\nOutput: {w}/{keys[0].stem}.audited.json, provenance.audited.jsonl, skipped.audited.jsonl, audit-findings.md\nScratch: {w}/scratch/audit/\n"))
+                              f"Key: {keys[0]}\nClaims: {w}/claims.jsonl\nProvenance: {w}/provenance.jsonl\nSkipped: {w}/skipped.jsonl\nDesign: {w}/design.json\nDecisions: {w}/decisions.md\nSource text: {w}/full.txt, pages {w}/pages.json, book {w / "source.pdf" if (w / "source.pdf").exists() else p}\nOutput: {w}/{keys[0].stem}.audited.json, provenance.audited.jsonl, skipped.audited.jsonl, audit-findings.md\nScratch: {w}/scratch/audit/\n"))
     if todo:
         print("Phase 2: spawn one clavis-auditor per key with these briefs:"); [print(f"  {t}") for t in todo]; return 0
 

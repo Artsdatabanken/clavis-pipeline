@@ -4,7 +4,11 @@ One file per way of running the pipeline. "Validated" means the maintainers ran 
 
 | Harness | Model | Status | Guide |
 |---|---|---|---|
-| Claude Code | Opus 5.5 running the job, Sonnet 5.5 for the agents | Validated | `claude-code.md` |
+| Claude Code | Opus 5.5 running the job, Sonnet 5.5 for the agents | Validated, recommended | `claude-code.md` |
+| Claude Code | Sonnet 5.5 throughout | Validated; cheaper, weaker keys | `claude-code.md` |
+| Claude Code | Opus 5.5 throughout | Validated; no better, three to five times the cost | `claude-code.md` |
+| Claude Code | Haiku 4.5 as harvester | Tested, not usable | `claude-code.md` |
+| Claude Code | Fable 5.1 | Not used: far more expensive, not needed | `claude-code.md` |
 | Codex, Cursor, Gemini CLI, Aider, OpenCode, Goose, others | any | Untested | send a `TEMPLATE.md` |
 | Local model behind an OpenAI-compatible server | any | Untested | `local.md` |
 

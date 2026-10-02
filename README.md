@@ -75,6 +75,8 @@ Recommended setup: **Claude Opus 5.5 runs the job, Claude Sonnet 5.5 does every 
 |---|---|---|---|---|
 | five printed field guides (four of them scanned books) and one existing digital matrix key | 24 | 73 min | 172 M / 7.0 M | USD 56 |
 
+Also tested: Opus for every agent (no better, three to five times the cost), Sonnet running the job as well (cheaper, but its own wrong calls cost separations), Haiku 4.5 as harvester (not good enough: half the claims, a fifth of its quotes not in the book), Fable 5.1 (far more expensive with nothing here that needs it). Details in `guides/claude-code.md`.
+
 Costs are what the same tokens would cost through the Claude API at list prices on 2 October 2026; prices change, the token counts are what to compare. Almost all of it is input re-read from cache. On a Claude Max subscription several runs fit in a day, so the practical cost per run is a few dollars.
 
 If you run the pipeline with another model or harness, please send what happened (`guides/TEMPLATE.md`, as a pull request): the aim is good keys from as little compute as possible, and a well-described failure helps as much as a success.
