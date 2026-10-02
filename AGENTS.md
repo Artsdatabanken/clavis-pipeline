@@ -29,7 +29,7 @@ The user names a taxon and points you at sources: local files, folders, or URLs.
 - Every state must be answerable by one person with one specimen and the guide, without a comparison specimen or experience.
 - A trait the source presents as diagnostic for a species is absent in the other species it describes; a species the source says cannot be told from another gets that one's values where it has none of its own. Both are scored by script from marked claims, never invented.
 - A parent's statement binds every descendant; never restate a character below an ancestor that has it. Exclusive characters carry no zero-frequency statements; zero is implied.
-- Every statement traces to claims; every claim reaches a statement or a skipped list with a reason. Judgment calls go in the decisions document, in the language of the source.
+- Every statement traces to claims; every claim reaches a statement or a skipped list with a reason; every claim's quote is verbatim in the source, and every stretch of the source the harvester was given is either quoted or decided by a different agent. Judgment calls go in the decisions document, in the language of the source.
 
 ## If you are not Claude Code
 

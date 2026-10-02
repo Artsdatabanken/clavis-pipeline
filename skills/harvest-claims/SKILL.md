@@ -53,6 +53,10 @@ For each taxon in turn, with only that taxon's file open:
 
 When every taxon is done, merge: `scripts/check_claims.py work/<source>/claims/*.checked.jsonl --out work/<source>/claims.jsonl`. The script normalizes, validates the fields you set, drops duplicates and assigns stable ids. It contains no words of any language: what the source means is in your fields.
 
+## Checking the claims against the source
+
+`scripts/source_coverage.py` is run by the auditor, never by the harvester: every quote must occur verbatim in the book, and every stretch of eight or more words on the harvester's pages that no claim quotes is listed for a decision (claims added, or no observable claim, not a listed taxon, unreadable). This is what makes "the harvester wrote down everything" a measured statement instead of a hope.
+
 ## Checking a key against the claims
 
 Two directions, both deterministic once the key's statements carry provenance (`provenance.jsonl`, `skipped.jsonl`; formats in `references/claim-schema.md`):

@@ -74,6 +74,8 @@ def main() -> int:
         print("Phase 0: prepare each source (run these, then plan.py again):")
         for s, p in srcs.items():
             w = W / s; w.mkdir(exist_ok=True)
+            if not (w / "source.pdf").exists():
+                (w / "source.pdf").symlink_to(p.resolve())   # source_coverage.py and the gates read the book from here
             print(f'  pdftotext -layout "{p}" "{w}/full.txt"')
             print(f'  {py} {H}/taxon_names.py "{a.taxa}" --lang {a.lang} --out "{W}/names.json"')
             print(f'  {py} {H}/find_sections.py "{w}/full.txt" --taxa "{a.taxa}" --names "{W}/names.json" --out "{w}/"')
@@ -107,7 +109,7 @@ def main() -> int:
         keys = [k for k in w.glob(f"{s}.*.json") if ".audited" not in k.name and "design" not in k.name]
         if keys and not list(w.glob("*.audited.json")):
             todo.append(brief(f"audit-{s}", "audit-clavis-key", "clavis-auditor",
-                              f"Key: {keys[0]}\nClaims: {w}/claims.jsonl\nProvenance: {w}/provenance.jsonl\nSkipped: {w}/skipped.jsonl\nDesign: {w}/design.json\nDecisions: {w}/decisions.md\nOutput: {w}/{keys[0].stem}.audited.json, provenance.audited.jsonl, skipped.audited.jsonl, audit-findings.md\nScratch: {w}/scratch/audit/\n"))
+                              f"Key: {keys[0]}\nClaims: {w}/claims.jsonl\nProvenance: {w}/provenance.jsonl\nSkipped: {w}/skipped.jsonl\nDesign: {w}/design.json\nDecisions: {w}/decisions.md\nSource text: {w}/full.txt, pages {w}/pages.json, book {w}/source.pdf\nOutput: {w}/{keys[0].stem}.audited.json, provenance.audited.jsonl, skipped.audited.jsonl, audit-findings.md\nScratch: {w}/scratch/audit/\n"))
     if todo:
         print("Phase 2: spawn one clavis-auditor per key with these briefs:"); [print(f"  {t}") for t in todo]; return 0
 

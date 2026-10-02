@@ -27,7 +27,7 @@ You enter with no extraction commitments to defend. The digitizer designed and s
 Progress checklist, copy it and tick as you go:
 
 ```
-- [ ] 1 verify.py, claims_vs_key.py, check_bins.py, coverage_test.py
+- [ ] 1 verify.py, claims_vs_key.py, check_bins.py, coverage_test.py, source_coverage.py
 - [ ] 2 partition and type on the flagged rows
 - [ ] 3 determinability flags
 - [ ] 4 fixes through design.json; phase 1 again until 0/0
@@ -41,11 +41,13 @@ python3 <repo>/tools/verify.py KEY.json
 python3 <repo>/skills/harvest-claims/scripts/claims_vs_key.py claims.jsonl KEY.json --provenance provenance.jsonl --skipped skipped.jsonl --out KEY.claims-audit.md
 python3 scripts/check_bins.py KEY.json
 python3 scripts/coverage_test.py KEY.json claims.jsonl provenance.jsonl --out KEY.coverage-test.md
+python3 <repo>/skills/harvest-claims/scripts/source_coverage.py claims.jsonl work/<source>/full.txt --pages work/<source>/pages.json --pdf work/<source>/source.pdf --decisions work/<source>/source-coverage.decisions.jsonl --out work/<source>/source-coverage.md
 ```
 
 - `verify.py`: parse, required fields, id integrity, references, state belongs to its character, frequencies in [0, 1], no dead groups, no overriding, leaf discriminability, numerical characters well-formed (unit, min ≤ max, one range per taxon, ranges inside the character range). Convention warnings only on exclusive characters.
 - Claims audit: direction A (statements without a claim; a numerical statement whose range does not cover its claim) and direction B (claims that reached neither a statement nor the skipped list). Both are findings.
 - `check_bins.py`: numerical characters have a unit and valid ranges; any leftover bin labels are contiguous.
+- `source_coverage.py`: the claims against the book itself, the check nothing else does. Every quote must occur verbatim in the source; every stretch of eight or more words on the harvester's pages that no claim quotes is listed. For each stretch, read it: add the missing claims to `claims.jsonl` with verbatim quotes (then re-score through the design), or record a decision (`no-observable-claim`, `not-a-listed-taxon`, `unreadable`) per stretch or per page in `source-coverage.decisions.jsonl`. You are not the harvester; this is why you do it.
 - `coverage_test.py`: Protocol 1 Test B from the provenance: every claim maps to a state by wording or containment, or is listed as "mapped by judgment" for you to confirm; numerical claims outside their statement's range are defects.
 
 If overriding is found, `scripts/fix_inherit.py IN.json OUT.json` repairs it mechanically.
@@ -66,7 +68,7 @@ For every flag: can one person, with one specimen and the guide, no comparison s
 
 Apply every fix through the generator and `design.json` (so `score_claims.py` reproduces the key) or, when the generator is gone, directly in the JSON with `provenance.jsonl` and `skipped.jsonl` kept in step. State splits and merges can use `refine-clavis-key/scripts/apply_state_splits.py` and `apply_state_merges.py`; character splits `apply_character_split.py`.
 
-Then Phase 1 again, in full. Any finding is another round. The audit is complete only when the verifier passes, `check_bins.py` is clean, `coverage_test.py` has no numerical defects, and the claims audit reports **0 unsupported statements and 0 unaccounted claims**. Report those numbers.
+Then Phase 1 again, in full. Any finding is another round. The audit is complete only when the verifier passes, `check_bins.py` is clean, `coverage_test.py` has no numerical defects, the claims audit reports **0 unsupported statements and 0 unaccounted claims**, and the source coverage reports **0 quotes not found and 0 open stretches**. Report those numbers, with the share of the source's words that are quoted.
 
 Write `<key>.audit-findings.md`: every finding, the fix, the numbers before and after. Update the decisions document with what changed.
 

@@ -122,6 +122,8 @@ Every draft is audited before it may enter the merge - by a different agent that
 
 First the programs: the structural verifier (the file parses; every statement points to a species, question and answer that exist; frequencies lie between 0 and 1; a species' range lies inside the question's range; no question is stated both on a group and on one of its members; no two species end up with identical answers to everything); the claims audit in both directions; the range check; and the coverage test, which lists every claim whose wording does not match the state it was mapped to, so that the auditor looks only at the mappings that needed judgment.
 
+One more program checks the claims against the book itself, the step no other check covers: every quote must occur word for word in the source, and every stretch of eight or more words on the harvester's pages that no claim quotes is listed. The auditor, who is not the harvester, reads each stretch and either adds the claims that were missed or records why there are none (not about a listed species, nothing observable, unreadable). The share of the book's words that ended up quoted is reported.
+
 Then the judgment, on the flagged rows only: do sibling states overlap; is a measurement hiding as a set of bins; is a state a fair reading of its quote ("small round ears" scored as "ears clearly protruding" is not); can a user pick each state with one specimen in hand. Then the fixes, applied through the design so the program reproduces the key, and the programs again, until every count is zero. The corrected key is saved as a new version alongside the original - nothing is overwritten - together with a findings document.
 
 ## 11. Step 6 - Merge: many keys become one

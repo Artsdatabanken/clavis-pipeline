@@ -11,8 +11,10 @@ Usage:
 Gates:
   1 verify.py                       PASS required
   2 check_bins.py                   no defects (bins and numerical ranges)
-  3 claims audit per source         0 unsupported, 0 unaccounted; needs <sources>/<src>/claims.jsonl,
-                                    provenance.jsonl, skipped.jsonl and the audited key <src>/*.audited.json
+  3 claims audit per source         0 unsupported, 0 unaccounted (key vs claims), and source coverage
+                                    0 quotes not found, 0 open stretches (claims vs the book); needs
+                                    <src>/claims.jsonl, provenance, skipped, the audited key, full.txt,
+                                    pages.json, source.pdf, source-coverage.decisions.jsonl
   4 roundtrip.py                    0 LOST (needs --spec and --source-keys)
   5 redundancy.py                   reported: pairs separated, inseparable pairs listed
   6 geography                       no pair separated only by a location character
@@ -57,8 +59,17 @@ for cl in sorted(glob.glob(os.path.join(a.sources, "*", "claims.jsonl"))):
     rc, out = run(cmd)
     m = re.search(r"A: (\d+) unsupported statements; B: (\d+) unaccounted claims", out)
     u, g = (int(m.group(1)), int(m.group(2))) if m else (None, None)
-    g3.append((src, "", u, g)); ok3 = ok3 and rc == 0
-G[3] = (ok3 and bool(g3), "; ".join(f"{s}: {u} unsupported, {g} unaccounted" if u is not None else f"{s}: {why}" for s, why, u, g in g3) or "no claims files found")
+    sc = ""
+    if os.path.exists(os.path.join(sdir, "full.txt")) and os.path.exists(os.path.join(sdir, "pages.json")):
+        scmd = [sys.executable, os.path.join(REPO, "skills/harvest-claims/scripts/source_coverage.py"), cl, os.path.join(sdir, "full.txt"),
+                "--pages", os.path.join(sdir, "pages.json"), "--out", os.path.join(a.out, f"gate3-{src}.source-coverage.md")]
+        if os.path.exists(os.path.join(sdir, "source.pdf")): scmd += ["--pdf", os.path.join(sdir, "source.pdf")]
+        if os.path.exists(os.path.join(sdir, "source-coverage.decisions.jsonl")): scmd += ["--decisions", os.path.join(sdir, "source-coverage.decisions.jsonl")]
+        rc2, out2 = run(scmd)
+        sc = out2.splitlines()[-1].split(" -> ")[0] if out2 else ""
+        rc = rc or rc2
+    g3.append((src, sc, u, g)); ok3 = ok3 and rc == 0
+G[3] = (ok3 and bool(g3), "; ".join((f"{s}: {u} unsupported, {g} unaccounted" + (f"; source: {why}" if why else "")) if u is not None else f"{s}: {why}" for s, why, u, g in g3) or "no claims files found")
 
 if a.spec and a.source_keys:
     cmd = [sys.executable, os.path.join(REPO, "skills/merge-clavis-keys/scripts/roundtrip.py"), "--merged", a.key, "--spec", a.spec, "--csv", a.csv, "--report", os.path.join(a.out, "gate4-roundtrip.md")]
