@@ -12,7 +12,7 @@ Nothing in the skills depends on a particular model or vendor; a skill is a mark
 
 ## How to tell whether a local model is good enough
 
-Run its harvest on one book and compare with the Sonnet harvest of the same book (`claude-code.md` shows the Haiku comparison). `harvest-claims/scripts/source_coverage.py` gives the numbers that matter without anyone reading the claims: how many quotes are found word for word in the book, what share of the book's words ended up quoted, how many unquoted stretches remain. Please send the result, good or bad.
+Run its harvest on one book and compare with a Sonnet harvest of the same book. `harvest-claims/scripts/source_coverage.py` gives the numbers that matter without anyone reading the claims: how many quotes are found word for word in the book, what share of the book's words ended up quoted, how many unquoted stretches remain. Please send the result, good or bad.
 
 ## Expectations
 

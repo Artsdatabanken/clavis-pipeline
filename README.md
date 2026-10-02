@@ -69,12 +69,15 @@ The model matters. The pipeline was developed and run with Claude Opus-class mod
 
 ## Models and cost
 
-Tested in Claude Code, October 2026, on a key to 24 species built from five printed field guides (four of them scanned books) and one existing digital matrix key:
+Recommended setup: **Claude Opus 5.5 runs the job, Claude Sonnet 5.5 does every agent's work**, in Claude Code (`guides/claude-code.md`). Measured with that setup, October 2026:
 
-- **Recommended: Claude Opus 5.5 orchestrating, Claude Sonnet 5.5 for every agent.** 73 minutes, all gates passed, one species pair inseparable (no source separates it). About 171 M cached input tokens, mostly Sonnet; USD 56 at Claude API list prices on 2 October 2026. On a Claude Max subscription several runs fit in a day, so the practical cost per run is a few dollars.
-- All Sonnet is cheaper (USD 36) with slightly weaker keys; all Opus costs three to five times as much and is not better; Haiku 4.5 is not good enough even for harvesting.
+| Material | Taxa | Wall-clock | Tokens (cache read / cache write) | API-equivalent cost |
+|---|---|---|---|---|
+| five printed field guides (four of them scanned books) and one existing digital matrix key | 24 | 73 min | 172 M / 7.0 M | USD 56 |
 
-Details, tokens per model and the comparison runs are in `guides/claude-code.md`. If you run the pipeline with another model or harness, please send what happened (`guides/TEMPLATE.md`, as a pull request): the aim is good keys from as little compute as possible, and a well-described failure helps as much as a success.
+Costs are what the same tokens would cost through the Claude API at list prices on 2 October 2026; prices change, the token counts are what to compare. Almost all of it is input re-read from cache. On a Claude Max subscription several runs fit in a day, so the practical cost per run is a few dollars.
+
+If you run the pipeline with another model or harness, please send what happened (`guides/TEMPLATE.md`, as a pull request): the aim is good keys from as little compute as possible, and a well-described failure helps as much as a success.
 
 ## Tools, sources and adapters
 
