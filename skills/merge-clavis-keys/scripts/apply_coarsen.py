@@ -32,8 +32,8 @@ for c in d["characters"]:
 
 acc = collections.OrderedDict()
 for s in d["statements"]:
-    v = remap.get(s["value"], s["value"])
-    k = (s["taxon"], s["character"], v)
+    v = s["value"] if isinstance(s["value"], list) else remap.get(s["value"], s["value"])
+    k = (s["taxon"], s["character"], json.dumps(v))
     if k in acc: acc[k]["frequency"] = round(acc[k]["frequency"] + s["frequency"], 4)
     else: s = dict(s); s["value"] = v; acc[k] = s
 d["statements"] = list(acc.values())
