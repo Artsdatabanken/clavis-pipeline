@@ -28,6 +28,9 @@ import unicodedata
 from collections import Counter, defaultdict
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "harvest-claims" / "scripts"))
+from claims_vs_key import unit_factor
+
 
 def norm(s: str) -> str:
     s = unicodedata.normalize("NFKC", str(s)).lower().strip()
@@ -59,7 +62,7 @@ def main() -> int:
         src = src.rstrip("]")
         key = gl.get(norm(title), norm(title))
         if c.get("type") == "numerical":
-            key += f" ({U(c)})"
+            key = "NUM " + key          # one measurement per title; units are scaled below
         groups[key].append({"src": src, "title": title, "c": c})
 
     used_labels: dict[str, Counter] = defaultdict(Counter)
@@ -77,7 +80,13 @@ def main() -> int:
         if typ == "numerical":
             entry["unit"] = Counter(U(m["c"]) for m in members).most_common(1)[0][0]
             for m in members:
-                entry["members"][m["src"]][m["title"]] = {}
+                f = unit_factor(U(m["c"]), entry["unit"])
+                key_title = m["title"]
+                while key_title in entry["members"][m["src"]]:      # same title twice in one source: keep both
+                    key_title += " (2)"
+                entry["members"][m["src"]][key_title] = {} if f == 1.0 else {"scale": f}
+                if f == 1.0 and U(m["c"]) != entry["unit"]:
+                    todo.append(("unit", canon, m["src"], m["title"], f"unit {U(m['c'])!r} vs canonical {entry['unit']!r}: not convertible, decide"))
         else:
             freq = Counter()
             for m in members:
@@ -105,6 +114,7 @@ def main() -> int:
     a.out.write_text(json.dumps(spec, ensure_ascii=False, indent=1), encoding="utf-8")
     lonely = [t for t in todo if t[0] == "lonely"]
     labels = [t for t in todo if t[0] == "label"]
+    units = [t for t in todo if t[0] == "unit"]
     L = [f"# Spec draft: what the agent must decide", "",
          f"{len(spec)} canonical characters from {len(d['characters'])} source characters; {len(lonely)} are still one source only; {len(labels)} labels unmapped (null in the draft; reconcile.py refuses nulls).", "",
          "## Characters from a single source", "",
@@ -112,6 +122,8 @@ def main() -> int:
     L += [f"- {c} ({s}: {t})" for _, c, s, t, _ in lonely]
     L += ["", "## Labels to map", "", "Replace each null with a list of canonical labels (several when the source is vaguer than the canonical set), or [] when the label says nothing about this character.", ""]
     L += [f"- {c} / {s} / {t}: `{lab}` -> null" for _, c, s, t, lab in labels]
+    if units:
+        L += ["", "## Units that could not be converted", ""] + [f"- {c} / {s} / {t}: {why}" for _, c, s, t, why in units]
     a.todo.write_text("\n".join(L) + "\n", encoding="utf-8")
     print(f"{len(spec)} canonical characters -> {a.out}; {len(lonely)} single-source, {len(labels)} unmapped labels -> {a.todo}")
     return 0

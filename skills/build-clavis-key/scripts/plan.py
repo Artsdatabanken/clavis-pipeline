@@ -117,7 +117,9 @@ def main() -> int:
     if not (M / "07-hierarchy.json").exists():
         print("Phase 3: merge (run in order; decide spec.json by meaning where the todo file says):")
         print(f'  cp "{a.taxa}" "{M}/species.csv"')
-        print(f'  {py} {MS}/union_keys.py --csv "{M}/species.csv" --out "{M}/03-union.json" ' + " ".join(f'"{k}"' for k in audited) + "   # add --alias alias.json after resolving synonyms")
+        alias = f' --alias "{M}/alias.json"' if (M / "alias.json").exists() else ""
+        print(f"  resolve every source name through the taxonomy adapter; synonyms with evidence go to {M}/alias.json, then:")
+        print(f'  {py} {MS}/union_keys.py --csv "{M}/species.csv"{alias} --out "{M}/03-union.json" ' + " ".join(f'"{k}"' for k in audited))
         print(f'  {py} {MS}/concordance_candidates.py "{M}/03-union.json" --out "{M}/candidates.md"')
         print(f'  {py} {MS}/draft_spec.py "{M}/03-union.json" --out "{M}/spec.json" --todo "{M}/spec.todo.md" --lang {a.lang}')
         print(f"  edit {M}/spec.json per spec.todo.md and candidates.md (meaning, not wording), then:")

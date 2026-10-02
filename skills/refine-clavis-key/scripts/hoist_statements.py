@@ -10,8 +10,9 @@ A child without an explicit assertion on a character blocks hoisting at
 that level — there's no way to know what value the child should inherit
 once the parent commits.
 
-Statements are re-emitted from the post-hoist asserted map so the
-frequency-rule shape is rebuilt cleanly.
+Statements are re-emitted from the post-hoist map with their frequencies
+unchanged; only positive statements are written (zero is implied on
+exclusive characters). Numerical values ([min, max]) are hoisted like states.
 
 Usage:
   ./venv/bin/python hoist_statements.py IN.json --out OUT.json
@@ -55,13 +56,14 @@ def main(argv: list[str] | None = None) -> int:
     for t in clavis["taxa"]:
         post(t["id"])
 
-    # Build asserted map from statements (positive-frequency entries)
-    asserted: dict[tuple[str, str], set[str]] = {}
+    # asserted: (taxon, character) -> {value: frequency}; values are state ids or
+    # (min, max) tuples for numerical characters. Positive frequencies only.
+    asserted: dict[tuple[str, str], dict] = {}
     for s in clavis["statements"]:
         if s["frequency"] > 0:
-            asserted.setdefault((s["taxon"], s["character"]), set()).add(s["value"])
+            v = tuple(s["value"]) if isinstance(s["value"], list) else s["value"]
+            asserted.setdefault((s["taxon"], s["character"]), {})[v] = s["frequency"]
 
-    # All character IDs (lookup target during hoist scan)
     char_ids = [c["id"] for c in clavis["characters"]]
 
     n_hoisted = 0
@@ -70,40 +72,31 @@ def main(argv: list[str] | None = None) -> int:
         if len(kids) < 2:
             continue
         for char_id in char_ids:
-            child_sets: list[frozenset[str] | None] = []
-            for cid in kids:
-                v = asserted.get((cid, char_id))
-                child_sets.append(frozenset(v) if v is not None else None)
-            if any(s is None for s in child_sets):
+            child_maps = [asserted.get((cid, char_id)) for cid in kids]
+            if any(m is None for m in child_maps):
                 continue
-            first = child_sets[0]
-            if not all(s == first for s in child_sets[1:]):
-                continue
+            first = child_maps[0]
+            if not all(m == first for m in child_maps[1:]):
+                continue   # whole frequency vectors must agree, not just the value sets
             existing = asserted.get((tid, char_id))
-            if existing is not None and set(existing) != set(first):
-                continue  # parent says different — don't override
-            asserted[(tid, char_id)] = set(first)
+            if existing is not None and existing != first:
+                continue   # parent says different; no overriding
+            asserted[(tid, char_id)] = dict(first)
             for cid in kids:
-                if (cid, char_id) in asserted:
-                    del asserted[(cid, char_id)]
+                asserted.pop((cid, char_id), None)
             n_hoisted += 1
 
-    # Re-emit statements
-    char_states_map = {c["id"]: [s["id"] for s in c["states"]] for c in clavis["characters"]}
+    # Re-emit positive statements only (zero is implied on exclusive characters);
+    # frequencies are carried through unchanged.
     new_statements: list[dict] = []
-    for (tid, char_id), state_set in asserted.items():
-        if not state_set:
-            continue
-        all_state_ids = char_states_map.get(char_id, [])
-        n = len(state_set)
-        freq_pos = 1.0 if n == 1 else 0.5
-        for sid in all_state_ids:
+    for (tid, char_id), vals in asserted.items():
+        for v, f in vals.items():
             new_statements.append({
                 "id": f"statement:{uuid.uuid4().hex}",
                 "taxon": tid,
                 "character": char_id,
-                "value": sid,
-                "frequency": freq_pos if sid in state_set else 0,
+                "value": list(v) if isinstance(v, tuple) else v,
+                "frequency": f,
             })
 
     clavis["statements"] = new_statements

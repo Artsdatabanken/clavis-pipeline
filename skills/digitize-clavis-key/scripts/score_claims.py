@@ -184,7 +184,8 @@ def main() -> int:
                 # an exact match on the whole value wins: "ikke hareskår" must not
                 # also score "hareskår", "grålig hvit" not also "hvit"
                 hit = [(sid, vals) for sid, vals in state_index[c["key"]] if v in vals]
-                if not hit:
+                if not hit and re.search(r"\b(eller|or|og|and|oder|of|ou|o)\b|[/,]", cl["value"], re.I):
+                    # the claim lists alternatives ("hvit eller grå"): each listed value may match a state
                     hit = [(sid, vals) for sid, vals in state_index[c["key"]] if any(f" {x} " in words for x in vals if x)]
                 if not hit:
                     continue

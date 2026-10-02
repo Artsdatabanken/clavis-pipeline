@@ -86,6 +86,20 @@ def from_pdfimages(pdf: Path, lo: int, hi: int) -> list[dict]:
     return out
 
 
+def is_scan(pdf: Path, lo: int) -> bool:
+    """A scanned book lists one page-sized image per page. Sample two pages."""
+    if not shutil.which("pdfimages"):
+        return False
+    r = subprocess.run(["pdfimages", "-list", "-f", str(lo), "-l", str(lo + 1), str(pdf)], capture_output=True, text=True, timeout=120)
+    rows = [l.split() for l in r.stdout.splitlines()[2:] if l.strip() and l.split()[0].isdigit()]
+    if not rows:
+        return False
+    per_page = {}
+    for p in rows:
+        per_page.setdefault(int(p[0]), []).append(int(p[3]) * int(p[4]))
+    return all(len(v) == 1 and v[0] > 1_000_000 for v in per_page.values())
+
+
 def from_text(text_path: Path, lo: int, hi: int) -> list[dict]:
     pages = text_path.read_text(encoding="utf-8", errors="replace").split("\f")
     out = []
@@ -109,14 +123,19 @@ def main() -> int:
     ap.add_argument("--text", type=Path, help="pdftotext output of the whole book (form-feed separated)")
     ap.add_argument("--layout", type=Path, help="layout.json from tools/ocr_pdf.py --layout")
     ap.add_argument("--render", type=Path, help="folder for PNG crops / page renders")
-    ap.add_argument("--dpi", type=int, default=150)
+    ap.add_argument("--dpi", type=int, default=100)
+    ap.add_argument("--max-pages", type=int, default=60, help="render at most this many whole pages (scans without layout)")
     a = ap.parse_args()
     lo, hi = parse_range(a.pages)
 
     figs: list[dict] = []
     if a.layout and a.layout.exists():
         figs += from_layout(a.layout, lo, hi)
-    figs += from_pdfimages(a.pdf, lo, hi)
+    scan = is_scan(a.pdf, lo)
+    if scan:
+        print("scanned book: embedded-image listing skipped (one image per page); figures come from layout.json and the text heuristics")
+    else:
+        figs += from_pdfimages(a.pdf, lo, hi)
     if a.text and a.text.exists():
         figs += from_text(a.text, lo, hi)
 
@@ -147,7 +166,7 @@ def main() -> int:
                 subprocess.run(["pdftoppm", "-f", str(n), "-l", str(n), "-r", str(a.dpi), "-png", "-x", str(int(x0 * a.dpi / 72)), "-y", str(int(y0 * a.dpi / 72)),
                                 "-W", str(int((x1 - x0) * a.dpi / 72)), "-H", str(int((y1 - y0) * a.dpi / 72)), "-singlefile", str(a.pdf), str(name)], capture_output=True)
                 f["png"] = str(name) + ".png"
-            elif n not in done:
+            elif n not in done and len(done) < a.max_pages:
                 name = a.render / f"p-{n:03d}"
                 subprocess.run(["pdftoppm", "-f", str(n), "-l", str(n), "-r", str(a.dpi), "-png", "-singlefile", str(a.pdf), str(name)], capture_output=True)
                 f["png"] = str(name) + ".png"

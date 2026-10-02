@@ -18,7 +18,7 @@ Outputs, in --out
                   counts; plus the proposed section range and the printed-page
                   offset (mode of printed_number - pdf_page over pages whose
                   header or footer carries a bare page number)
-  <taxon>.txt     the taxon's pages (best run, padded by one page each side)
+  <taxon>.txt     the pages where the taxon has a heading (plus the next page),
                   with "===== PDF page N (printed page M) =====" markers
   section.txt     the whole proposed section, same markers
 
@@ -135,36 +135,53 @@ def main() -> int:
                 section = [c[0], c[-1]]
                 break
     back_matter = []
+    HEAD_MAX = 45          # a species heading is a short line
+    SENTENCE = re.compile(r"[.,;:]\s*\S")   # sentence punctuation followed by text: body, not heading
+
+    def heading_pages(t: str) -> list[int]:
+        """Pages in the section with a heading-like line for the taxon: a short
+        line, no sentence punctuation, with the Latin name (best) or a vernacular
+        name at the start (definite forms -en/-a/-et and all caps allowed). All
+        such pages are returned: a book may treat a species in several places
+        (overview, account, tracks, skull), and a species account may start on
+        the overview's page."""
+        g, *rest = t.split()
+        latin = [re.compile(re.escape(t), re.I)]
+        if rest:
+            latin.append(re.compile(re.escape(g[0]) + r"\.\s*" + re.escape(" ".join(rest)), re.I))
+        vern = [n for n in extra.get(t, []) if not re.match(r"^[A-Z]\.\s", n)]
+        vern_rx = [re.compile(r"^" + re.escape(n) + r"(en|a|et|ene|er)?\b", re.I) for n in vern]
+        found = {}
+        lo, hi = section
+        for i in range(lo, hi + 1):
+            prev_lines = {l.strip() for l in pages[i - 2].splitlines()} if i >= 2 else set()
+            for line in pages[i - 1].splitlines():
+                s = line.strip()
+                if not (2 < len(s) <= HEAD_MAX) or SENTENCE.search(s):
+                    continue
+                if s in prev_lines:
+                    continue   # running header repeated from the previous page, not a heading
+                score = 3 if any(rx.match(s) for rx in latin) else 2 if any(rx.search(s) for rx in latin) else 1 if any(rx.match(s) for rx in vern_rx) else 0
+                if score:
+                    found[i] = max(found.get(i, 0), score)
+        return sorted(found)
+
     if section:
         for t, r in result.items():
             inside = [p for p in r["pages"] if section[0] <= p <= section[1]]
             if r["pages"] and not inside:
                 back_matter.append(t)
-            # a taxon's own pages: from its first mention inside the section up to
-            # the next taxon's first mention (species are treated one after another),
-            # at most 6 pages; this replaces the hit-run when the name appears once
-            if inside:
-                r["best"] = [inside[0]]
-        starts = sorted((r["best"][0], t) for t, r in result.items() if r["best"] and section[0] <= r["best"][0] <= section[1])
-        for k, (p0, t) in enumerate(starts):
-            p1 = starts[k + 1][0] - 1 if k + 1 < len(starts) else min(section[1], p0 + 5)
-            p1 = max(p0, min(p1, p0 + 5))
-            result[t]["best"] = list(range(p0, p1 + 1))
-
-    override = {}
-    if a.pages_override:
-        for t, spec in json.loads(a.pages_override.read_text(encoding="utf-8")).items():
-            ps = set()
-            for x in spec:
-                if isinstance(x, str) and "-" in x:
-                    lo, hi = map(int, x.split("-")); ps.update(range(lo, hi + 1))
-                else:
-                    ps.add(int(x))
-            override[t] = sorted(ps)
-        for t, ps in override.items():
-            if t in result:
-                result[t]["best"] = ps
-                result[t]["override"] = True
+            hp = heading_pages(t) if r["pages"] else []
+            if hp:
+                r["heading_pages"] = hp
+                ps = set()
+                for p in hp:
+                    ps.update((p, p + 1))        # a heading page and the one after it
+                r["best"] = sorted(p for p in ps if section[0] <= p <= section[1])[:12]
+            elif inside:
+                # no heading found: the page with the most mentions inside the section
+                dens = max(inside, key=lambda p: (sum(len(rx.findall(pages[p - 1])) for rx in patterns(t)), -p))
+                r["best"] = [dens, dens + 1]
 
     a.out.mkdir(parents=True, exist_ok=True)
     meta = {"source_text": str(a.text), "pdf_pages": len(pages), "printed_page_offset": offset,
@@ -193,9 +210,9 @@ def main() -> int:
             if r.get("override"):
                 ps = r["best"]
             else:
-                ps = list(range(max(1, r["best"][0]), min(len(pages), r["best"][-1] + 1) + 1))
+                ps = r["best"]
             write_pages(a.out / (re.sub(r"[^A-Za-z0-9]+", "_", t).strip("_") + ".txt"), ps,
-                        head + (f"# Taxon: {t}. Pages chosen by the orchestrator: {ps}. All mentions on PDF pages: {r['pages']}\n" if r.get("override") else f"# Taxon: {t}. From its first mention in the section to the next taxon's, padded one page. All mentions on PDF pages: {r['pages']}\n"))
+                        head + (f"# Taxon: {t}. Pages chosen by the orchestrator: {ps}. All mentions on PDF pages: {r['pages']}\n" if r.get("override") else f"# Taxon: {t}. Pages with a heading for it (and the page after each). All mentions on PDF pages: {r['pages']}\n"))
 
     print(f"{len(pages)} PDF pages; printed-page offset {offset if offset is not None else 'unknown'}")
     print(f"proposed section: PDF pages {section}" if section else "no section found")
