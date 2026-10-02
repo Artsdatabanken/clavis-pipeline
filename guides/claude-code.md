@@ -67,6 +67,18 @@ Prices used (per million tokens, Claude API list prices on 2 October 2026): Opus
 
 **What it costs in practice.** On a Claude Max subscription (the USD 100 per month tier) several such runs fit in a day within the plan's limits, so the real cost per run is a few dollars at most. Check `/usage` before a run: a run uses a noticeable part of a 5-hour session budget, and pauses until the reset rather than failing if it runs out.
 
+## Optional installs
+
+- **Figures in scanned books.** A scanned book has one image per page, so figures can only be found by a layout model. Install Surya once in a local environment (needs a GPU for reasonable speed):
+
+  ```
+  uv venv --python 3.12 .venv
+  uv pip install --python .venv surya-ocr
+  ```
+
+  Then, per scanned book: `.venv/bin/python tools/layout_pdf.py BOOK.pdf --pages <section> --out work/<source>/layout.json`, and pass `--layout work/<source>/layout.json` to `find_figures.py`. Without it the harvesters work from the text only.
+- **Checking the skills against the Agent Skills specification:** `uv tool install skills-ref`, then `agentskills validate skills/<name>`.
+
 ## Known rough edges
 
 - The skills say `python3`; on Windows use `python`.
