@@ -77,6 +77,7 @@ def main() -> int:
     ap.add_argument("--out", required=True, type=Path)
     ap.add_argument("--names", type=Path, help="extra names per taxon, JSON {taxon: [names]}")
     ap.add_argument("--min-hits", type=int, default=2)
+    ap.add_argument("--pdf", type=Path, help="the source PDF: per-taxon files are written in reading order (pdftotext without -layout), so two-column pages are not interleaved and quotes copied from them are verbatim in the book")
     ap.add_argument("--pages-override", type=Path,
                     help="JSON {taxon: [pdf pages or 'a-b' ranges]} set by the orchestrator after reading the "
                          "source; replaces the heuristic run for those taxa (books with an overview plate or "
@@ -214,11 +215,22 @@ def main() -> int:
         printed = f" (printed page {i + offset})" if offset is not None else ""
         return f"\n===== PDF page {i}{printed} =====\n"
 
+    import shutil, subprocess
+    reading = {}
+
+    def page_text(i: int) -> str:
+        if a.pdf and shutil.which("pdftotext"):
+            if i not in reading:
+                r = subprocess.run(["pdftotext", "-f", str(i), "-l", str(i), "-enc", "UTF-8", str(a.pdf), "-"], capture_output=True, text=True)
+                reading[i] = r.stdout if r.returncode == 0 and r.stdout.strip() else pages[i - 1]
+            return reading[i]
+        return pages[i - 1]
+
     def write_pages(path: Path, ps: list[int], head: str):
         body = [head]
         for i in ps:
             if 1 <= i <= len(pages):
-                body.append(marker(i) + pages[i - 1])
+                body.append(marker(i) + page_text(i))
         path.write_text("".join(body), encoding="utf-8")
 
     head = (f"# Source text: {a.text.name}. Page markers give the PDF page and, when known, the printed page; cite the printed page.\n"

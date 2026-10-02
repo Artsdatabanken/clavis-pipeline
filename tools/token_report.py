@@ -97,7 +97,8 @@ def cost(tot, models) -> float | None:
     if not models:
         return None
     model = models.most_common(1)[0][0]
-    p = PRICES.get(model)
+    # dated ids ("claude-haiku-4-5-20251001") are priced as their family id
+    p = PRICES.get(model) or next((v for k, v in sorted(PRICES.items(), key=lambda kv: -len(kv[0])) if model.startswith(k)), None)
     if not p:
         return None
     i, o, cr = p

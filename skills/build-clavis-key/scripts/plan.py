@@ -78,7 +78,7 @@ def main() -> int:
                 (w / "source.pdf").symlink_to(p.resolve())   # source_coverage.py and the gates read the book from here
             print(f'  pdftotext -layout "{p}" "{w}/full.txt"')
             print(f'  {py} {H}/taxon_names.py "{a.taxa}" --lang {a.lang} --out "{W}/names.json"')
-            print(f'  {py} {H}/find_sections.py "{w}/full.txt" --taxa "{a.taxa}" --names "{W}/names.json" --out "{w}/"')
+            print(f'  {py} {H}/find_sections.py "{w}/full.txt" --taxa "{a.taxa}" --names "{W}/names.json" --pdf "{p}" --out "{w}/"')
             print(f'  {py} {H}/find_figures.py "{p}" --pages <section from {w}/pages.json> --text "{w}/full.txt" --out "{w}/figures.json" --render "{w}/figures/"')
             print(f"  then read the first and last page of the section in {w}/section.txt and confirm or adjust (--pages-override).")
         for k in keys_in:
