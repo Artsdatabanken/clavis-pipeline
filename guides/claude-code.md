@@ -63,6 +63,14 @@ Measured with this setup, October 2026, as logged by Claude Code (`tools/token_r
 | Sonnet 5.5 | 5 harvesters, 5 digitizers, 6 auditors, 1 refiner, 2 usability, 1 restarted | 1 114 | 2 250 | 5.30 M | 125.5 M | 11.0 k | USD 38.48 |
 | total | 21 | 1 343 | 2 708 | 6.99 M | 171.6 M | 14.8 k | USD 56.21 |
 
+**One existing dichotomous key with a glossary, in a Word document, 47 taxa:** 46 minutes, 7 agents.
+
+| Model | Agents | Calls | Fresh input | Cache write | Cache read | Output (logged) | API cost |
+|---|---|---|---|---|---|---|---|
+| Opus 5.5 | orchestrator | 81 | 194 | 0.69 M | 9.5 M | 4.6 k | USD 5.43 |
+| Sonnet 5.5 | 1 harvester, 1 digitizer, 2 auditors, 2 usability | 369 | 742 | 1.88 M | 46.3 M | 6.0 k | USD 14.03 |
+| total | 7 | 450 | 936 | 2.57 M | 55.8 M | 10.6 k | USD 19.46 |
+
 Prices used (per million tokens, Claude API list prices on 2 October 2026): Opus 5.5 USD 4 input, 20 output, 0.20 cache read; Sonnet 5.5 USD 2 input, 10 output, 0.20 cache read; cache writes at 1.25 times input. Prices change; the token counts are what to compare.
 
 **What it costs in practice.** On a Claude Max subscription (the USD 100 per month tier) several such runs fit in a day within the plan's limits, so the real cost per run is a few dollars at most. Check `/usage` before a run: a run uses a noticeable part of a 5-hour session budget, and pauses until the reset rather than failing if it runs out.

@@ -74,6 +74,7 @@ Recommended setup: **Claude Opus 5.5 runs the job, Claude Sonnet 5.5 does every 
 | Material | Taxa | Wall-clock | Tokens (cache read / cache write) | API-equivalent cost |
 |---|---|---|---|---|
 | five printed field guides (four of them scanned books) and one existing digital matrix key | 24 | 73 min | 172 M / 7.0 M | USD 56 |
+| one existing dichotomous key with a glossary, in a Word document | 47 | 46 min | 56 M / 2.6 M | USD 19 |
 
 Also tested: Opus for every agent (no better, three to five times the cost), Sonnet running the job as well (cheaper, but its own wrong calls cost separations), Haiku 4.5 as harvester (not good enough: half the claims, a fifth of its quotes not in the book), Fable 5.1 (far more expensive with nothing here that needs it). Details in `guides/claude-code.md`.
 
