@@ -1,0 +1,10 @@
+requests
+lxml
+jsonschema
+openpyxl
+pikepdf
+Pillow
+reportlab
+markdown-it-py
+browser-cookie3
+pypdf

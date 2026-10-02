@@ -1,0 +1,29 @@
+# Source material must never be committed
+*.pdf
+*.PDF
+*.jpg
+*.jpeg
+*.png
+*.tif
+*.tiff
+*.djvu
+*.epub
+*.xlsx
+*.zip
+work/
+ocr/
+pages/
+scans/
+sources/
+references/
+urls*.txt
+
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# Local
+.DS_Store
+adapter_cache.json

@@ -1,0 +1,111 @@
+# Clavis pipeline
+
+Turn printed identification keys, field guides, spreadsheets and online keys into [Clavis](https://github.com/Artsdatabanken/Clavis) identification-key files, with AI agents doing the reading and deterministic scripts doing the checking.
+
+This repository contains the pipeline only: instructions for the model, the scripts those instructions call, and the two agent definitions. It contains no source books, scans, OCR output or draft keys. Bring your own sources.
+
+## Quick start
+
+Give this to your AI agent, whichever one you use:
+
+> Clone https://github.com/Artsdatabanken/clavis-pipeline, read its AGENTS.md, and make a Clavis key for <taxon> from <these files / this folder / these links>.
+
+`AGENTS.md` tells the agent the order of steps, where the scripts are, and the rules. Claude Code users get a smoother path by linking the skills in first (`guides/claude-code.md`). Other harnesses read `AGENTS.md` on their own.
+
+Sources can be local files (PDF, page images, spreadsheets, existing Clavis files) or online (an nb.no book, a Naturalis or artfakta key). It runs on Linux, macOS and Windows; everything is Python except OCR, which needs Surya.
+
+For the reasoning behind the design, read `docs/clavis-agentic-workflow.md` first. It explains the whole process from book to verified key for readers without a background in biology, keys or computing.
+
+## What is in here
+
+```
+AGENTS.md   what any AI agent reads first; CLAUDE.md points Claude Code at it
+guides/     one page per harness and model: what is validated, what is reported, the feedback template
+skills/     one folder per step; SKILL.md is the procedure, references/ the detail it links to, scripts/ its code
+agents/     three agent definitions for Claude Code: harvester (one per taxon per source), digitizer (one per source), auditor (one per draft)
+adapters/   everything that talks to a taxonomy register or national list; NorTaxa is the example
+sources/    downloaders and scrapers for particular places material comes from (nb.no, Naturalis, artfakta)
+tools/      generic helpers: OCR, verifier, refiner
+docs/       the workflow explainer
+schema/     the Clavis JSON Schema the output is validated against
+```
+
+Generic versus specific: `skills/`, `agents/`, `tools/`, `docs/` and `schema/` know nothing about any provider. `adapters/` and `sources/` are the only places a register or website is named. To run the pipeline in another country, write a taxonomy adapter and a species-list script (the contract is in `adapters/taxonomy/__init__.py` and `adapters/README.md`) and, if needed, a downloader for your library. Nothing else changes.
+
+The steps, in the order they run:
+
+| Step | Skill | What it does |
+|---|---|---|
+| 1 | `build-clavis-key` | Orchestrates everything below for a target taxon and a folder of sources. Builds the species list (Norway: NorTaxa plus the alien-species list), then runs one digitizer per source, one audit per draft, then merge and verify. |
+| 2 | `digitize-clavis-key` | One source in, one draft key out. Splits bundled prose into single-trait characters, makes states a clean partition, bins measurements with units, scores frequencies, hoists shared traits to the parent taxon, mines descriptions for extra discriminators. Writes a decisions document alongside. |
+| 3 | `audit-clavis-key` | Fresh agent checks a draft against its source. Deterministic verifier first (`tools/verify.py`), then overlap and gap tests, numeric-anchor checks, source-coverage spot check. Writes a corrected key as a new version, never overwrites. |
+| 4 | `refine-clavis-key` | Structural cleanup of a key that came from a transcoder (matrix export, web scrape). Merges duplicate characters, splits bundled states, infers hierarchy, hoists statements. Needs no source material. |
+| 5 | `merge-clavis-keys` | Combines several audited keys into one. Union first (equal weight per source), taxonomy from the register, intersection-first conflict handling, source-weighted frequencies on real disagreement, redundancy-based state coarsening, and a round-trip check that every claim from every source survives. |
+| 6 | `harvest-claims` | Lists every observable claim a source makes, one per taxon, with quote and page, into `claims.jsonl`. Runs before digitization; digitization scores from it and records provenance; the audit and the final gate check both directions: every statement traces to a claim, every claim reached the key or was deliberately skipped. |
+| 7 | `translate-json` | Adds a language to any JSON file with language-keyed strings. Scripts extract and splice; the model only translates. Optional glossary, reference texts and a vernacular-name adapter that looks names up in taxonomic registers instead of translating them. |
+
+Each skill is self-contained: the SKILL.md names every script it uses by path relative to its own folder, and every script is plain Python 3 with command-line help.
+
+## Using it with Claude Code
+
+Start Claude Code inside this folder; it picks up the skills and agents from `.claude/` with no setup. Your sources can be anywhere, give their paths. To have the skills available from any folder, link or copy them into `~/.claude/` (`guides/claude-code.md`). Then:
+
+> Make me a key for Soricidae from these books.
+
+Claude picks `build-clavis-key`, which spins up the digitizer and auditor agents itself. To run a single step, name it: "digitize this PDF into a Clavis key", "audit this key against the book", "merge these three keys", "translate this key to English".
+
+## Using it with another framework
+
+Nothing here depends on Claude. A skill is a markdown file plus scripts, and `AGENTS.md` is the entry point most harnesses (Codex, Cursor, Gemini CLI, Aider, OpenCode) read on their own. Only Claude Code has been validated so far; `guides/` tracks the rest, and `guides/TEMPLATE.md` is the form we ask users to send back as a pull request. To run a step by hand in any agent framework:
+
+1. Give the agent `skills/<step>/SKILL.md` as its system prompt or task instructions, unchanged.
+2. Give it a shell and the `skills/<step>/scripts/` folder (or `pipeline/` for translate-json), so it can run the scripts the instructions name.
+3. Give it the source document (or the key to audit, merge or translate) and tell it where to write.
+
+The two files in `agents/` describe the digitizer and auditor roles in a few paragraphs; use them as the agent's persona, or ignore them and use the skills directly. The one rule that matters when you run several digitizers: each must see only its own source. The independence of the drafts is what the merge step relies on.
+
+The model matters. The pipeline was developed and run with Claude Opus-class models with vision, reading page images directly to catch figure labels that OCR drops. A model without vision will miss those; a much smaller model will make more of the judgment errors the audit step is there to catch. Costs are reported in the workflow document.
+
+## Tools, sources and adapters
+
+`tools/` (generic):
+
+| Script | Purpose |
+|---|---|
+| `ocr_pdf.py` | OCR stitched page images into a searchable PDF (Surya), with reading-order handling for two-column layouts. |
+| `verify.py` | The structural verifier every skill calls: parse, required fields, id integrity, references, frequencies in [0, 1], no dead groups, no overriding, leaf discriminability. `--without REGEX` re-checks with matching characters removed. |
+
+`sources/` (one folder per place material comes from; see `sources/README.md`):
+
+| Folder | Purpose |
+|---|---|
+| `nb.no/` | Page images from the National Library of Norway, stitched from IIIF tiles, plus crop and rotate (`crop_rotate.py`). |
+| `naturalis/` | Naturalis Linnaeus-NG keys: dichotomous keys scraped to PDF, matrix keys scraped and transcoded to Clavis. |
+| `artfakta/` | SLU Artdatabanken: the artfakta.se matrix-key API and the SLU key-authoring workbook, transcoded to Clavis. |
+
+`adapters/` (one module per register; see `adapters/README.md`):
+
+| Path | Purpose |
+|---|---|
+| `taxonomy/nortaxa.py` | Resolve names, get higher classification and vernacular names from NorTaxa. Default; select another with `CLAVIS_TAXONOMY=<name>`. |
+| `species-list/norway.py` | Species CSV for a Norwegian taxon from NorTaxa plus the alien-species list. |
+
+Transcoder output is a rough draft. Run `refine-clavis-key` on it, then `audit-clavis-key` if you have the source.
+
+## Requirements
+
+Python 3.11 or newer on Linux, macOS or Windows. `pip install -r requirements.txt` covers the scripts (`python` instead of `python3` on Windows). OCR additionally needs [Surya](https://github.com/VikParuchuri/surya). Text extraction from PDFs uses `pdftotext` (poppler) where available and falls back to `pypdf`.
+
+## Output
+
+Every run produces a Clavis JSON file validated against `schema/Clavis.json`, plus companion documents: a decisions record, the partition-test tables, audit findings, and for merges the removed-characters list, round-trip report, and coverage and redundancy reports. The key is meant as an expert-editable draft. Open it in the [Clavis editor](https://clavis.no) or any viewer that reads the format.
+
+## Sources stay out of this repository
+
+Never commit source material: scanned books, PDFs, page images, OCR text, scraped HTML, or draft keys derived from copyrighted works. `.gitignore` blocks the common file types; check `git status` before every commit anyway.
+
+## Citation
+
+Koch W, Elven H, Finstad AG (2022). Clavis: An open and versatile identification key format. PLoS ONE 17(12): e0277752. https://doi.org/10.1371/journal.pone.0277752
+
+The pipeline itself is presented at TDWG 2026.
