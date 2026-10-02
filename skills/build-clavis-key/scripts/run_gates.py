@@ -48,7 +48,10 @@ G[2] = (rc == 0, out.splitlines()[-1] if out else "")
 g3, ok3 = [], True
 for cl in sorted(glob.glob(os.path.join(a.sources, "*", "claims.jsonl"))):
     sdir = os.path.dirname(cl); src = os.path.basename(sdir)
-    keys = sorted(glob.glob(os.path.join(sdir, "*.audited.json"))) or sorted(glob.glob(os.path.join(sdir, "*.json")))
+    pick = lambda *names: next((os.path.join(sdir, n) for n in names if os.path.exists(os.path.join(sdir, n))), None)
+    cl = pick("claims.audited.jsonl", "claims.jsonl")      # an auditor that added claims writes claims.audited.jsonl
+    # the source's own key only (named <src>.<taxon>...), never a design/pages companion that also ends in .audited.json
+    keys = sorted(glob.glob(os.path.join(sdir, f"{src}.*.audited.json"))) or sorted(k for k in glob.glob(os.path.join(sdir, f"{src}.*.json")) if ".audited" not in k)
     prov = [p for p in (os.path.join(sdir, "provenance.audited.jsonl"), os.path.join(sdir, "provenance.jsonl")) if os.path.exists(p)]
     skip = [p for p in (os.path.join(sdir, "skipped.audited.jsonl"), os.path.join(sdir, "skipped.jsonl")) if os.path.exists(p)]
     if not keys or not prov:
@@ -60,12 +63,20 @@ for cl in sorted(glob.glob(os.path.join(a.sources, "*", "claims.jsonl"))):
     m = re.search(r"A: (\d+) unsupported statements; B: (\d+) unaccounted claims", out)
     u, g = (int(m.group(1)), int(m.group(2))) if m else (None, None)
     sc = ""
-    if os.path.exists(os.path.join(sdir, "full.txt")) and os.path.exists(os.path.join(sdir, "pages.json")):
+    pages = pick("pages.audited.json", "pages.json")
+    if os.path.exists(os.path.join(sdir, "full.txt")) and pages:
         scmd = [sys.executable, os.path.join(REPO, "skills/harvest-claims/scripts/source_coverage.py"), cl, os.path.join(sdir, "full.txt"),
-                "--pages", os.path.join(sdir, "pages.json"), "--out", os.path.join(a.out, f"gate3-{src}.source-coverage.md")]
+                "--pages", pages, "--out", os.path.join(a.out, f"gate3-{src}.source-coverage.md")]
         if os.path.exists(os.path.join(sdir, "source.pdf")): scmd += ["--pdf", os.path.join(sdir, "source.pdf")]
-        if os.path.exists(os.path.join(sdir, "source-coverage.decisions.jsonl")): scmd += ["--decisions", os.path.join(sdir, "source-coverage.decisions.jsonl")]
+        dec = pick("source-coverage.decisions.audited.jsonl", "source-coverage.decisions.jsonl")
+        if dec: scmd += ["--decisions", dec]
         rc2, out2 = run(scmd)
+        if rc2 != 0 and "--pdf" in scmd:
+            # the quotes and the auditor's decisions may follow the layout text layer instead of the reading order;
+            # a quote is verbatim in the book if it is verbatim in either layer, so the layout run counts when it is clean
+            i = scmd.index("--pdf"); lay = scmd[:i] + scmd[i + 2:]
+            rc3, out3 = run(lay)
+            if rc3 == 0: rc2, out2 = rc3, out3 + " (layout text layer)"
         sc = out2.splitlines()[-1].split(" -> ")[0] if out2 else ""
         rc = rc or rc2
     g3.append((src, sc, u, g)); ok3 = ok3 and rc == 0

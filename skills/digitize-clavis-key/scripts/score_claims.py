@@ -235,6 +235,8 @@ def main() -> int:
     implied = 0
     for cid, claim_ids in diagnostic_hits.items():
         for t in tid.values():
+            if t in same_as:
+                continue  # a taxon the source calls indistinguishable copies its look-alike's values below, not an implied absence
             if (t, cid) not in cat_acc:
                 cat_acc[(t, cid)][absent_state[cid]].append((1.0, claim_ids[0]))
                 implied += 1

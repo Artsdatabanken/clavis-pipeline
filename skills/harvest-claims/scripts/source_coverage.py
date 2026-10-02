@@ -103,7 +103,12 @@ def main() -> int:
     if a.decisions and a.decisions.exists():
         for l in a.decisions.read_text(encoding="utf-8").splitlines():
             if l.strip():
-                d = json.loads(l); decided[d["sentence"]] = d
+                d = json.loads(l); decided[d.get("gap") or d.get("sentence") or "page:%s" % d.get("page")] = d
+    if a.pdf:
+        for p in given:  # reading order per page, so quotes crossing columns or line breaks are found
+            r = subprocess.run(["pdftotext", "-f", str(p), "-l", str(p), str(a.pdf), "-"], capture_output=True, text=True)
+            if r.returncode == 0 and r.stdout.strip():
+                reading_order[p] = r.stdout
 
     # token stream per given page
     page_toks = {}

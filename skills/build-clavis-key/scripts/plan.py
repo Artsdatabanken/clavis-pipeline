@@ -107,7 +107,7 @@ def main() -> int:
     for s, p in srcs.items():
         w = W / s
         keys = [k for k in w.glob(f"{s}.*.json") if ".audited" not in k.name and "design" not in k.name]
-        if keys and not list(w.glob("*.audited.json")):
+        if keys and not list(w.glob(f"{s}.*.audited.json")):
             todo.append(brief(f"audit-{s}", "audit-clavis-key", "clavis-auditor",
                               f"Key: {keys[0]}\nClaims: {w}/claims.jsonl\nProvenance: {w}/provenance.jsonl\nSkipped: {w}/skipped.jsonl\nDesign: {w}/design.json\nDecisions: {w}/decisions.md\nSource text: {w}/full.txt, pages {w}/pages.json, book {w}/source.pdf\nOutput: {w}/{keys[0].stem}.audited.json, provenance.audited.jsonl, skipped.audited.jsonl, audit-findings.md\nScratch: {w}/scratch/audit/\n"))
     if todo:
@@ -115,7 +115,7 @@ def main() -> int:
 
     M = W / "merge"; M.mkdir(exist_ok=True)
     MS = REPO / "skills/merge-clavis-keys/scripts"
-    audited = sorted(set(W.glob("*/*.audited.json")))
+    audited = sorted({k for k in W.glob("*/*.audited.json") if k.name.startswith(k.parent.name + ".")})  # keys only, not design/pages/claims companions
     if not (M / "07-hierarchy.json").exists():
         print("Phase 3: merge (run in order; decide spec.json by meaning where the todo file says):")
         print(f'  cp "{a.taxa}" "{M}/species.csv"')

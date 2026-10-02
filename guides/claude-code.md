@@ -50,6 +50,10 @@ Validated on Claude Opus 5.5 (full rodent run, 1 October 2026) with the pipeline
 
 Vision matters: the digitizer reads page images directly to catch the labels around figures that OCR drops. All current Claude models have it.
 
+### Opus orchestrating, Sonnet agents: the default
+
+Start Claude Code in this folder on Opus; `.claude/settings.json` forces every sub-agent onto Sonnet. Measured on the rodent key, 2 October 2026, same six sources: all-Sonnet (run 4) USD 36, 85 min, 3 species pairs unseparated, 74 characters; Opus orchestrator with Sonnet agents (run 5) USD 56 (USD 18 of it the orchestrator), 73 min, 1 pair unseparated (the two beavers, which no source separates), 81 characters. The orchestrator is where the judgment calls are: page ranges, catching harvesters that marked "very similar" as "cannot be told apart", fixing scripts that break on real data.
+
 ### Haiku: tested, not used
 
 On 2 October 2026 one book (Gibson, 24 species) was harvested by Haiku 4.5 and by Sonnet 5.5 with identical inputs and instructions. Haiku: 298 claims, 61 quotes not in the book, 12% of the book's words quoted, none of the structured fields filled (numbers, diagnostic traits, comparisons), "usually" on almost every claim, and claims for a species the book does not describe. Sonnet: 584 claims, every quote found, 39% of the words quoted, all fields used. Saving: USD 1.30 per book. Harvesting is the simplest model job in the pipeline, so Haiku is not used for any agent.
