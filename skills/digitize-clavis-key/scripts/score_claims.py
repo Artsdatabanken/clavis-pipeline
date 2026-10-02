@@ -233,8 +233,17 @@ def main() -> int:
     # implied absence: a diagnostic trait is lacking in every other taxon the
     # source describes (that is what makes it diagnostic)
     implied = 0
+    claim_by_id = {c.get("id"): c for c in claims}
     for cid, claim_ids in diagnostic_hits.items():
-        for t in tid.values():
+        # a key couplet's lead implies absence only for the taxa under the opposite
+        # lead (`absent_for` on the claim); a trait the source presents as diagnostic
+        # in prose implies absence for every other taxon the source describes
+        scope = None
+        for k in claim_ids:
+            af = claim_by_id.get(k, {}).get("absent_for")
+            if isinstance(af, list):
+                scope = (scope or set()) | {tid[norm(x)] for x in af if norm(x) in tid}
+        for t in (scope if scope is not None else tid.values()):
             if t in same_as:
                 continue  # a taxon the source calls indistinguishable copies its look-alike's values below, not an implied absence
             if (t, cid) not in cat_acc:
