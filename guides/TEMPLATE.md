@@ -16,6 +16,10 @@ Copy this file to `guides/<harness>.md` and fill it in from an actual run. Short
 - Sources: <type only: scanned book from a national library, modern PDF field guide, matrix export, existing Clavis file. No titles needed if the source is not public.>
 - Date: <>
 
+## Gate results
+
+<Paste `leveranse/gates.md`: pairs separated, claims audit and source coverage per source, round-trip.>
+
 ## What happened, per step
 
 | Step | Result | Notes |
@@ -34,9 +38,10 @@ Copy this file to `guides/<harness>.md` and fill it in from an actual run. Short
 
 ## Cost and time
 
-- Model cost for the whole run: <>
 - Wall-clock time: <>
-- Tokens if known: <>
+- Per model: model id, which agents ran on it, calls, input, cache write, cache read and output tokens: <>
+- API-equivalent cost on the date of the run, with the prices used: <>
+- What it cost you in practice (subscription, local hardware, energy if you know it): <>
 
 ## Would you run it again this way?
 

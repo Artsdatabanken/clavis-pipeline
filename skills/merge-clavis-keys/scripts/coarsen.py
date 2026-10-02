@@ -5,8 +5,15 @@ characters are never touched (numerical characters have no bins to merge).
 
 Usage: coarsen.py IN.json OUT.json --neighbours neighbours.json --workdir coarsen/ [--log coarsen-log.json]
 
-neighbours.json, written by the merge agent (or the determinability pass):
-  {"Character title": [["label a", "label b"], ...]}        pairs that may merge
+neighbours.json, written by the determinability pass (a judgment, not a list of every pair):
+  {"Character title": [{"pair": ["label a", "label b"], "why": "how a person with one specimen
+                        could take one for the other"}, ...]}
+  A pair is only listed when the two states are close on the observable itself
+  (adjacent shades, adjacent shapes), never because merging them would be free.
+  Every pair needs a "why". A state may have at most two neighbours: a palette
+  or a shape series is a line or a ring, where each value touches two others;
+  a state listed next to everything is a list of pairs, not a judgment, and is
+  refused. Old format (bare [a, b] pairs) is refused for the same reason.
   optional "__names__": {"label a|label b": "merged label"}  else "a eller b"-style join is NOT
                                                             invented: the first label wins
 Per step the candidate must pass redundancy.py --merge (no pair loses its
@@ -31,8 +38,24 @@ T = lambda o: next(iter((o.get("title") or {}).values()), "")
 load = lambda p: json.load(open(p, encoding="utf-8"))
 dump = lambda d, p: json.dump(d, open(p, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 
-NB = load(a.neighbours)
-NAMES = NB.pop("__names__", {})
+NB_raw = load(a.neighbours)
+NAMES = NB_raw.pop("__names__", {})
+NB, problems = {}, []
+for ch, entries in NB_raw.items():
+    pairs, degree = [], {}
+    for e in entries:
+        if not isinstance(e, dict) or not e.get("why") or len(e.get("pair", [])) != 2:
+            problems.append(f"{ch}: every entry needs {{'pair': [a, b], 'why': ...}}; got {e!r}")
+            continue
+        x, y = e["pair"]
+        pairs.append([x, y])
+        degree[x] = degree.get(x, 0) + 1; degree[y] = degree.get(y, 0) + 1
+    crowded = [s for s, n in degree.items() if n > 2]
+    if crowded:
+        problems.append(f"{ch}: {', '.join(crowded)} listed as neighbour of more than two states; list only the states a person could actually confuse with it")
+    NB[ch] = pairs
+if problems:
+    sys.exit("neighbours.json refused:\n  " + "\n  ".join(problems))
 os.makedirs(a.workdir, exist_ok=True)
 comp = {}   # (char, merged label) -> set of atomic labels
 def atoms(ch, l): return comp.get((ch, l), {l})

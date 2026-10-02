@@ -67,6 +67,15 @@ The two files in `agents/` describe the digitizer and auditor roles in a few par
 
 The model matters. The pipeline was developed and run with Claude Opus-class models with vision, reading page images directly to catch figure labels that OCR drops. A model without vision will miss those; a much smaller model will make more of the judgment errors the audit step is there to catch. Costs are reported in the workflow document.
 
+## Models and cost
+
+Tested in Claude Code, October 2026, on a 24-species key from five books and one matrix key:
+
+- **Recommended: Claude Opus 5.5 orchestrating, Claude Sonnet 5.5 for every agent.** 73 minutes, all gates passed, one species pair inseparable (no source separates it). About 171 M cached input tokens, mostly Sonnet; USD 56 at Claude API list prices on 2 October 2026. On a Claude Max subscription several runs fit in a day, so the practical cost per run is a few dollars.
+- All Sonnet is cheaper (USD 36) with slightly weaker keys; all Opus costs three to five times as much and is not better; Haiku 4.5 is not good enough even for harvesting.
+
+Details, tokens per model and the comparison runs are in `guides/claude-code.md`. If you run the pipeline with another model or harness, please send what happened (`guides/TEMPLATE.md`, as a pull request): the aim is good keys from as little compute as possible, and a well-described failure helps as much as a success.
+
 ## Tools, sources and adapters
 
 `tools/` (generic):

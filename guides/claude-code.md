@@ -1,6 +1,6 @@
 # Claude Code
 
-The harness the pipeline was built and validated on.
+The harness the pipeline was built and validated on. Other harnesses and models: see `README.md` in this folder, and please send your results.
 
 ## Setup
 
@@ -28,39 +28,62 @@ Start Claude Code in a folder that holds your sources, or in the repository with
 
 ## Running
 
-Name the taxon and the sources:
+Start Claude Code in the repository folder, on Opus, and name the taxon and the sources:
 
-> Make a key for Soricidae from the two PDFs in ./sources and this nb.no link: <url>
+> Make a key for Soricidae from the PDFs in /path/to/sources, using species.csv there as the species list. Run straight through.
 
-`build-clavis-key` takes over. It spawns one `clavis-digitizer` sub-agent per source and one `clavis-auditor` per draft, which is how the sources stay independent. It pauses once after the per-source drafts unless you tell it not to.
+`build-clavis-key` takes over; its planner script tells it each phase. It spawns one harvester and one digitizer per source, one auditor per draft and one usability agent for the merged key, which is how the sources stay independent and no agent checks its own work.
 
-Single steps by name: "audit key.json against sources/book.pdf", "merge these three keys", "translate key.json to en".
+Single steps by name: "audit key.json against its claims", "merge these three keys", "translate key.json to en", "did this key miss anything in the book".
 
-## Model
+## Models
 
-Every agent in a run must use the model the run was started with, and nothing more expensive. Three layers enforce it under Claude Code:
+**Recommended: Opus orchestrates, Sonnet does every agent's work.** Start Claude Code in this folder with Opus as the session model; `.claude/settings.json` (`CLAUDE_CODE_SUBAGENT_MODEL=sonnet`, `CLAUDE_CODE_SUBAGENT_MODEL_FORCE=1`) forces every sub-agent onto Sonnet, and the agent files say `model: sonnet` as well. The orchestrator is where the judgment sits (page ranges, catching harvesters that mark "very similar" as "cannot be told apart", fixing scripts that break on real data); the agents follow skills with checklists and scripts behind them.
 
-1. `agents/*.md` carry `model: opus`, so a sub-agent spawned without an explicit model does not fall back to the main conversation's model. (That fallback is what happened on 1 October 2026: one nested agent ran half its calls on Claude Fable 5.1, five times the price, because neither the definition nor the spawn named a model.)
-2. `.claude/settings.json` in this repository sets `CLAUDE_CODE_SUBAGENT_MODEL=opus` with `CLAUDE_CODE_SUBAGENT_MODEL_FORCE=1`, which makes Claude Code ignore every other model setting for sub-agents when it is started in this folder.
-3. The build skill tells the orchestrator to pass the run's model on every spawn.
+Tested with, all in Claude Code on Linux, October 2026:
 
-To run on another model (Sonnet 5.5 for the comparison), change the value in `.claude/settings.json` and in the three agent files; nothing else.
+| Model | API id | Role tested | Verdict |
+|---|---|---|---|
+| Claude Opus 5.5 | `claude-opus-5-5` | orchestrator; all agents (runs 2, 3) | best orchestrator; as agents good but 3 to 5 times the cost |
+| Claude Sonnet 5.5 | `claude-sonnet-5-5` | all agents; orchestrator (run 4) | the agent model; as orchestrator it makes more wrong calls on its own |
+| Claude Haiku 4.5 | `claude-haiku-4-5-20251001` | harvester, one book | not usable: half the claims, a fifth of its quotes not in the book, structured fields ignored |
+| Claude Fable 5.1 | `claude-fable-5-1` | none on purpose; one nested agent fell back to it once | too expensive for this work; the model settings prevent it |
 
-Validated on Claude Opus 5.5 (full rodent run, 1 October 2026) with the pipeline as it was then; the current version (claims-driven digitization, numerical characters, determinability pass, gate runner) has not had its first full run yet. Claude Sonnet 5.5 (`claude-sonnet-5-5`) is the intended cheaper default once compared on the same job. Whatever the model, use the default effort or higher for digitize and audit; those are the judgment-heavy steps. Refine, merge and translate are mostly scripts and tolerate a cheaper setting.
+### The comparison runs
 
-Vision matters: the digitizer reads page images directly to catch the labels around figures that OCR drops. All current Claude models have it.
+All on the same job: Rodentia for Norway, 29 species on the list, 24 covered by the sources, five printed books (four scanned) and one transcoded matrix key, 2 October 2026 unless noted.
 
-### Opus orchestrating, Sonnet agents: the default
+| Run | Models | Pairs not separable (of 276) | Characters | Wall-clock | API-equivalent cost |
+|---|---|---|---|---|---|
+| 2 (1 Oct, older pipeline) | Opus throughout | 1 | 84 (bins) | 93 min | USD 119 |
+| 3 | Opus throughout | 2 | 86 | ~5 h (paused at a spend limit) | USD 173 |
+| 4 | Sonnet throughout | 3 | 74 | 85 min | USD 36 |
+| 5 | Opus orchestrator, Sonnet agents | 1 (the two beavers; no source separates them) | 81 | 73 min | USD 56 |
 
-Start Claude Code in this folder on Opus; `.claude/settings.json` forces every sub-agent onto Sonnet. Measured on the rodent key, 2 October 2026, same six sources: all-Sonnet (run 4) USD 36, 85 min, 3 species pairs unseparated, 74 characters; Opus orchestrator with Sonnet agents (run 5) USD 56 (USD 18 of it the orchestrator), 73 min, 1 pair unseparated (the two beavers, which no source separates), 81 characters. The orchestrator is where the judgment calls are: page ranges, catching harvesters that marked "very similar" as "cannot be told apart", fixing scripts that break on real data.
+Run 5's key also passes the check of every claim against the books (every quote word for word in its book, every unquoted stretch of the harvested pages read and decided), which runs 2 to 4 did not have.
 
-### Haiku: tested, not used
+### Tokens per model, run 5
 
-On 2 October 2026 one book (Gibson, 24 species) was harvested by Haiku 4.5 and by Sonnet 5.5 with identical inputs and instructions. Haiku: 298 claims, 61 quotes not in the book, 12% of the book's words quoted, none of the structured fields filled (numbers, diagnostic traits, comparisons), "usually" on almost every claim, and claims for a species the book does not describe. Sonnet: 584 claims, every quote found, 39% of the words quoted, all fields used. Saving: USD 1.30 per book. Harvesting is the simplest model job in the pipeline, so Haiku is not used for any agent.
+As logged by Claude Code (`tools/token_report.py`). Output counts in Claude Code's transcripts look incomplete; the `/cost` screen is authoritative for output. Input dominates the cost regardless: every call re-reads the agent's context from the cache.
 
-## Cost and time
+| Model | Agents | Calls | Fresh input | Cache write | Cache read | Output (logged) | API cost, 2 Oct 2026 |
+|---|---|---|---|---|---|---|---|
+| Opus 5.5 | 1 orchestrator | 229 | 458 | 1.69 M | 46.0 M | 3.8 k | USD 17.73 |
+| Sonnet 5.5 | 20 (5 harvesters, 5 digitizers, 6 auditors, 1 refiner, 2 usability, 1 restarted) | 1 114 | 2 250 | 5.30 M | 125.5 M | 11.0 k | USD 38.48 |
+| total | 21 | 1 343 | 2 708 | 6.99 M | 171.6 M | 14.8 k | USD 56.21 |
 
-Measured, 1 October 2026, Rodentia for Norway, 29 species on the list, 24 covered, five scanned books plus one transcoded matrix key, Claude Opus 5.5 for the agents: 93 minutes wall-clock, 25 agent transcripts, 1681 model calls, 229 M cache-read tokens, 12.8 M cache-write tokens, 111 k output tokens, about USD 120 at list prices (`tools/token_report.py`). Roughly USD 5 per covered species, almost all of it input re-read from cache across the per-taxon harvest and per-source digitize and audit agents. The cuts listed in `TODO.md` target exactly that.
+Prices used (per million tokens, Claude API list prices on 2 October 2026): Opus 5.5 USD 4 input, 20 output, 0.20 cache read; Sonnet 5.5 USD 2 input, 10 output, 0.20 cache read; cache writes at 1.25 times input. Prices change; the token counts are what to compare. They are in `tools/token_report.py` and the final report of every run states both.
+
+**What it costs in practice.** The dollar figures are what the same tokens would cost through the API. On a Claude Max subscription (the USD 100 per month tier) several such runs fit in a day within the plan's limits, so the real cost per run is a few dollars at most (the maintainer's estimate: under USD 3). Check `/usage` before a run: a run uses a noticeable part of a 5-hour session budget, and pauses until the reset rather than failing if it runs out.
+
+### Why not other settings
+
+- **All Opus**: three to five times the cost of the recommended setting, no better keys.
+- **All Sonnet**: cheapest, but the orchestrator made content mistakes (undid a correct look-alike rule, skipped confirming section pages) that cost two species pairs.
+- **Haiku anywhere**: the harvest comparison (one book, identical inputs): Haiku 298 claims, 61 quotes not in the book, 12% of the book's words quoted, none of the structured fields filled, "usually" on almost every claim, claims for a species the book does not describe; Sonnet 584 claims, every quote found, 39% quoted, all fields used. Harvesting is the simplest model job here, so Haiku is not used for any agent.
+- **Model fallback**: a sub-agent with no model in its definition and none at spawn runs on the main session's model. That is how one agent ran on Fable 5.1 on 1 October. The agent files and the settings now prevent it.
+
+Vision matters for figure labels: the harvester reads figure crops. All current Claude models have vision; Haiku's harvest produced no figure claims.
 
 ## Known rough edges
 

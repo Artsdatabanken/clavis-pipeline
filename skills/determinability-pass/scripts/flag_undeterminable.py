@@ -17,12 +17,22 @@ Checks:
                 states
   NUMERIC-AS-STATES  every state label of a categorical character starts with
                 a number or a comparison symbol: should be a numerical character
+Every flag carries the number of species pairs that ONLY this character
+separates. Zero means something better exists and the character can go or be
+rewritten; more than zero means nothing better exists and the character stays
+unless a better wording is available. A relative word ("large", "small") with
+nothing better is a valid state: the user is told what to look for.
 Without --claims/--provenance only SHADES and NUMERIC-AS-STATES are checked.
 Numerical characters pass by construction.
 """
-import argparse, json, re, sys
+import argparse, importlib.util, itertools, json, os, re, sys
 from collections import defaultdict
 from pathlib import Path
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+_rp = os.path.join(HERE, "..", "..", "merge-clavis-keys", "scripts", "redundancy.py")
+_spec = importlib.util.spec_from_file_location("redundancy", _rp)
+R = importlib.util.module_from_spec(_spec); _spec.loader.exec_module(R)
 
 ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
 ap.add_argument("key"); ap.add_argument("--out", required=True)
@@ -49,6 +59,19 @@ for s in d["statements"]:
         stmt_by_state[s["value"]].append(s["id"])
 numeric_traits = {c["trait"].lower() for c in claims.values() if c.get("value_num")}
 
+# pairs only one character separates
+_d, _lv, _E, _taxa = R.load(a.key)
+_sep, *_ = R.analyse(_d, _lv, _E, {})
+sole = defaultdict(int)
+for pair, routes in _sep.items():
+    if len(routes) == 1:
+        sole[next(iter(routes))] += 1
+num_words = defaultdict(set)
+def _w(t): return {x for x in re.split(r"[\W_]+", t.lower()) if len(x) > 3}
+for c in d["characters"]:
+    if c.get("type") == "numerical":
+        for x in _w(T(c)): num_words[x].add(T(c))
+
 flags = []
 for c in d["characters"]:
     t = T(c)
@@ -59,6 +82,7 @@ for c in d["characters"]:
         flags.append(("SHADES", t, "", f"{len(labs)} states: {' / '.join(labs)}"))
     if len(labs) >= 2 and all(NUMBIN.match(l) for l in labs):
         flags.append(("NUMERIC-AS-STATES", t, "", "every state starts with a number; make this a numerical character"))
+
     for s in c.get("states") or []:
         backing = [claims[cid] for sid in stmt_by_state.get(s["id"], []) for cid in prov.get(sid, []) if cid in claims]
         if not backing:
@@ -70,11 +94,14 @@ for c in d["characters"]:
         if not any(cl.get("value_num") for cl in backing) and all(cl["trait"].lower() in numeric_traits for cl in backing):
             flags.append(("RELATIVE", t, T(s), "the source gives numbers for this trait elsewhere; this state has none"))
 
+cid = {T(c): c["id"] for c in d["characters"]}
+flags = [(k, t, l, why, sole.get(cid.get(t), 0)) for k, t, l, why in flags]
 out = [f"# Determinability flags for {Path(a.key).name}", "",
        "Criterion: can one person, with one specimen and this guide, no comparison specimen and no experience, pick the state? Decide each flagged row: merge, rewrite in absolute terms, convert to numerical, split, or keep with a one-line reason.", "",
-       "| kind | character | state | why |", "|---|---|---|---|"]
-for k, t, l, why in flags:
-    out.append(f"| {k} | {t} | {l} | {why} |")
+       "The last column is the number of species pairs that only this character separates: 0 means something better exists; more than 0 means nothing better exists, and a relative word is then a valid answer.", "",
+       "| kind | character | state | why | only separator for |", "|---|---|---|---|---|"]
+for k, t, l, why, n in flags:
+    out.append(f"| {k} | {t} | {l} | {why} | {n} pairs |")
 out.append(""); out.append(f"{len(flags)} flags on {len(d['characters'])} characters" + ("" if claims else " (structure only: pass --claims and --provenance for the claim-based checks)") + ".")
 open(a.out, "w", encoding="utf-8").write("\n".join(out) + "\n")
 print(f"{len(flags)} flags -> {a.out}")
