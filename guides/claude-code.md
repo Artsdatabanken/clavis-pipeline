@@ -51,7 +51,7 @@ Tested with, all in Claude Code on Linux, October 2026:
 
 ### The comparison runs
 
-All on the same job: Rodentia for Norway, 29 species on the list, 24 covered by the sources, five printed books (four scanned) and one transcoded matrix key, 2 October 2026 unless noted.
+All on the same job: a key to 24 species built from five printed field guides (four of them scanned books) and one existing digital matrix key, 2 October 2026 unless noted.
 
 | Run | Models | Pairs not separable (of 276) | Characters | Wall-clock | API-equivalent cost |
 |---|---|---|---|---|---|
