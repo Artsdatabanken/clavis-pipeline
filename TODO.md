@@ -30,9 +30,16 @@ The pipeline was rewritten after the first full run from this folder (rodent key
 
 **Guides and docs**: workflow document rewritten (sections 5–13), README, AGENTS.md, skill texts, claim schema, Claude guide.
 
+## Run 3 (2 October 2026, rewritten pipeline, Opus 5.5)
+
+All required gates passed. 86 characters (24 numerical), 873 statements, 259 KB (run 2: 84 bins, 2774 statements, 737 KB). But fewer separations (274 of 276 pairs; median 6 routes; run 2: 275, median 8) and higher cost (USD 173, 124 agent transcripts; run 2: USD 119, 25). Causes found and fixed in `Agentic/Gnagere-run3/leveranse/` and the commits after it:
+- 85 characters removed because only one species was scored and the rest were unknown. New rules (2 October): a trait the source presents as diagnostic is scored absent for the other species it describes; a species the source says cannot be told from another gets that one's values. Both by `score_claims.py` from marked claims (`diagnostic`, `same_as`); the *M. agrestis* / *M. levis* separation of run 2 came from exactly such a statement in Bjärvall.
+- 108 harvester agents (one per species per book): now one per source, species by species.
+- Thirteen script fixes found on real data (units, exact matching, open ranges, numerical support in merge scripts, page override, cost gate), committed.
+
 ## Open
 
-1. **First full run on the rewritten pipeline**, same six rodent sources and list, then compare with `Agentic/Gnagere-run2/leveranse/gnagere.rodentia.json` (separability per pair, characters, claims coverage, cost). Expect rough edges in the new scripts on real data; fix them in the scripts, not in prose.
+1. **Run 4**: same sources and list, to measure the effect of the two scoring rules and per-source harvesting on separability and cost. Compare with run 2 and run 3.
 2. **Viewer and editor**: numerical characters (range input, comparison against `[min, max]`, optional tolerance), implied zeros on exclusive characters, and short ids. The format side is Wouter's.
 3. Model comparison: Sonnet 5.5 on the same job (`.claude/settings.json` and the four agent files), then other models through OpenRouter; record in `guides/`.
 4. Decide whether the final gate gets its own fresh agent instead of the orchestrator (the gates are scripts, so this is about who fixes).

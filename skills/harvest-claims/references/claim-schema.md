@@ -18,7 +18,9 @@ Part of the `harvest-claims` skill. All files are JSON lines, UTF-8, one object 
 | `observable` | harvester | `false` for traits that cannot be seen on a specimen or find. Default `true`. |
 | `value_num` | `check_claims.py` | `[min, max]` parsed from `value`; `null` on an open side (`over 24 mm` → `[24, null]`). |
 | `unit` | `check_claims.py` | Unit parsed from `value` (`mm`, `g`, `%`). |
-| `note` | `check_claims.py` | Something the harvester must fix, e.g. a quote with two frequency words. |
+| `diagnostic` | harvester, else `check_claims.py` | `true` when the source presents the trait as what distinguishes the taxon (a key couplet, or wording like "skilles fra ... ved"). The digitizer scores the other taxa absent on that character. |
+| `same_as` | harvester | Scientific name of a taxon this one cannot be told from, per the source ("ingen ytre forskjeller fra ..."). The digitizer copies that taxon's values where this one has none. `trait` and `value` describe the statement itself. |
+| `note` | `check_claims.py` | Something the harvester must fix, e.g. a quote with two frequency words, or a look-alike quote without `same_as`. |
 
 Examples:
 

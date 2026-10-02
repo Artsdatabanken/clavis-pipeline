@@ -6,11 +6,11 @@ You are in the Clavis pipeline repository. Its job: turn identification material
 
 The user names a taxon and points you at sources: local files, folders, or URLs. Then:
 
-1. Read `skills/build-clavis-key/SKILL.md`. It is the orchestrator: species list, prepare each source once, harvest claims (one agent per taxon per source), digitize (one agent per source), audit (one fresh agent per draft), merge, determinability pass (one fresh agent), then the gates.
+1. Read `skills/build-clavis-key/SKILL.md`. It is the orchestrator: species list, prepare each source once, harvest claims (one agent per source, taxon by taxon), digitize (one agent per source), audit (one fresh agent per draft), merge, determinability pass (one fresh agent), then the gates.
 2. Each step has its own `skills/<step>/SKILL.md`. Read the one for the step you are on, follow it, run the scripts it names from `skills/<step>/scripts/`. Do not reinvent what a script already does; if a script is wrong, fix the script and say so in the report.
 3. For a single step ("audit this key", "translate this key to English", "did we miss anything in the book"), go straight to that skill.
 4. Work in a `work/` folder next to the sources, deliver in `leveranse/` next to it. Never write into the source folder, never overwrite the user's files; new versions get new filenames.
-5. Agents are separate on purpose: harvesters list claims, digitizers encode, auditors check, the usability agent makes states answerable, and no agent checks its own work. Each harvester sees one taxon of one source; each digitizer sees one source's claims; nobody sees another source. If your harness cannot spawn agents, do the jobs one after another in fresh sessions.
+5. Agents are separate on purpose: harvesters list claims, digitizers encode, auditors check, the usability agent makes states answerable, and no agent checks its own work. Each harvester sees one source, one taxon at a time; each digitizer sees one source's claims; nobody sees another source. If your harness cannot spawn agents, do the jobs one after another in fresh sessions.
 6. The run is not done when the key exists. It is done when the gates in `build-clavis-key` Phase 4 pass with numbers: verifier clean, every claim from every source accounted for, zero silent losses in the merge, no pair separated only by location. A failed gate is work, not a result; fix and re-run until it passes. The final report states what the run cost: tokens by kind, price, wall-clock (`tools/token_report.py` under Claude Code).
 
 ## Environment
@@ -27,6 +27,7 @@ The user names a taxon and points you at sources: local files, folders, or URLs.
 - Measurements are numerical characters with `[min, max]` per taxon, the union of what the sources say. No bins, no voting on numbers.
 - Frequencies are weak priors from one table; 0 excludes, anything above 0 keeps the taxon reachable. No vote shares, no arguments about 0.8 versus 0.7.
 - Every state must be answerable by one person with one specimen and the guide, without a comparison specimen or experience.
+- A trait the source presents as diagnostic for a species is absent in the other species it describes; a species the source says cannot be told from another gets that one's values where it has none of its own. Both are scored by script from marked claims, never invented.
 - A parent's statement binds every descendant; never restate a character below an ancestor that has it. Exclusive characters carry no zero-frequency statements; zero is implied.
 - Every statement traces to claims; every claim reaches a statement or a skipped list with a reason. Judgment calls go in the decisions document, in the language of the source.
 

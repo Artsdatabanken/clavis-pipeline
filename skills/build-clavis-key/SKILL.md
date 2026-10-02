@@ -1,6 +1,6 @@
 ---
 name: build-clavis-key
-description: End-to-end orchestration from a target taxon plus a folder of sources (PDFs, scans, existing Clavis files) to a finished, merged, measured Clavis identification key. Builds the species list through a species-list adapter (Norway: NorTaxa + alien-species list), prepares each source once (text, pages per taxon, figures), harvests claims with one agent per taxon per source, digitizes with one agent per source, audits every draft with a fresh agent, merges, runs the determinability pass, and loops on the gates until every one passes with numbers, then reports tokens and cost. Use when the user names a taxon and provides sources and wants the whole pipeline run ("make me a key for Soricidae from these books").
+description: Orchestrates end to end, from a target taxon plus a folder of sources (PDFs, scans, existing Clavis files) to a finished, merged, measured Clavis identification key. Builds the species list through a species-list adapter (Norway: NorTaxa + alien-species list), prepares each source once (text, pages per taxon, figures), harvests claims with one agent per source, digitizes with one agent per source, audits every draft with a fresh agent, merges, runs the determinability pass, and loops on the gates until every one passes with numbers, then reports tokens and cost. Use when the user names a taxon and provides sources and wants the whole pipeline run ("make me a key for Soricidae from these books").
 license: MIT
 compatibility: Python 3.11+ and network access to a taxonomy register (adapters/). Best with a harness that can run sub-agents; poppler for PDFs.
 metadata:
@@ -14,6 +14,20 @@ metadata:
 **Never delete or overwrite the user's files.** New files only. Work in `work/` next to the sources, deliver in `leveranse/` (or `deliverables/`) next to it.
 
 Orchestrates: species list → prepare each source → harvest claims → one key per source → audit → merge → determinability → gates. The run is not done when the key exists; it is done when every gate passes with numbers. A failing gate is work, not a result.
+
+Progress checklist, copy it and tick as you go:
+
+```
+- [ ] run-start.txt
+- [ ] 0 species list
+- [ ] 0b prepare each source (text, names, sections, figures)
+- [ ] 0c one harvester per source -> claims.jsonl
+- [ ] 1 one digitizer per source -> draft key + provenance + skipped
+- [ ] 2 one auditor per key -> *.audited.json at 0/0
+- [ ] 3 merge in work/merge
+- [ ] 3b determinability agent
+- [ ] 4 run_gates.py until all required gates pass; deliver
+```
 
 ## First thing: note the start time
 
@@ -51,9 +65,9 @@ Per source, in the orchestrator, never in an agent:
 
 An existing Clavis file among the sources (an artfakta download, a matrix export) skips harvesting and digitizing: it goes through `refine-clavis-key` (couplets decomposed per taxon along its own path, bins to numerical characters) and then `audit-clavis-key` without claims (structural phases only), and enters the merge like any other audited key.
 
-## Phase 0c: harvest claims (one agent per taxon per source)
+## Phase 0c: harvest claims (one agent per source)
 
-Spawn `clavis-harvester` agents (Agent tool, subagent_type `clavis-harvester`), one per taxon per source, in parallel as far as the harness allows. Brief: the taxon file, the figure entries on its pages, the taxon, the output path. Harvesters never see a key or another source. Then merge per source: `harvest-claims/scripts/check_claims.py work/<source>/claims/*.checked.jsonl --out work/<source>/claims.jsonl --lang <lang>`.
+Spawn one `clavis-harvester` agent per source (Agent tool, subagent_type `clavis-harvester`), sources in parallel. Brief: the source folder (`work/<source>/`, with the per-taxon text files and `figures.json`), the taxon list in order, the language, the output folder, its scratch directory. The agent works through the taxa one at a time, each with only that taxon's file open, and merges its own claims file at the end. One agent per source instead of one per taxon costs a fraction of the fixed per-agent context and keeps a book's conventions (abbreviations, page layout) learned once. Harvesters never see a key or another source.
 
 ## Phase 1: one key per source (one agent per source)
 

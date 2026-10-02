@@ -1,6 +1,6 @@
 ---
 name: determinability-pass
-description: Make every state of a Clavis key answerable by one person with one specimen and the guide, without a comparison specimen or prior experience. A script flags comparatives, bundles, relative words and over-fine palettes; the agent decides only the flagged rows, merges shades, rewrites comparatives in absolute terms or drops them, converts leftover bins to numerical characters, and the gate afterwards proves no species pair lost its last route. Runs on the merged key before the final gate, and on request on any key. Use when a key reads like a transcription instead of a field key.
+description: Makes every state of a Clavis key answerable by one person with one specimen and the guide, without a comparison specimen or prior experience. A script flags comparatives, bundles, relative words and over-fine palettes; the agent decides only the flagged rows, merges shades, rewrites comparatives in absolute terms or drops them, converts leftover bins to numerical characters, and the gate afterwards proves no species pair lost its last route. Runs on the merged key before the final gate, and on request on any key. Use when a key reads like a transcription instead of a field key.
 license: MIT
 compatibility: Python 3.11+. No network. Sees only the key, never the sources.
 metadata:

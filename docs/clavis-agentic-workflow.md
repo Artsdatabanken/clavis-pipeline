@@ -55,7 +55,7 @@ Whatever the form, the goal of this stage is the same: get each source's relevan
 
 1. Decide the scope: which species should the key cover?
 2. Prepare each source once: text, each species' pages, the figures.
-3. Harvest: one agent per species per source lists every claim the source makes, with a quote and a page.
+3. Harvest: one agent per source lists, species by species, every claim the source makes, with a quote and a page.
 4. Digitize: one agent per source designs the key's questions from the claims; a program scores the answers.
 5. Audit: a fresh agent checks each draft against the claims and fixes what it finds.
 6. Merge: all audited keys are combined into one.
@@ -80,9 +80,9 @@ Each source is reduced once, up front, by programs rather than by an agent readi
 
 The result is one small text file per species and a folder of figure crops. Nobody downstream reads the whole book, or whole page images, by default. This is where most of the cost of the earlier runs went: a 300-page book re-read by ten agents.
 
-## 8. Step 3 - Harvest: one agent per species per source
+## 8. Step 3 - Harvest: one agent per source, species by species
 
-A harvester gets one species' pages from one source, and its figure crops, and nothing else. It writes one line per claim the source makes about that species: the trait ("tail length relative to body"), the value as the source gives it ("over 2/3 of body length", "3–6 g"), how often the source says it holds (always, usually, rarely), the verbatim quote, and the printed page. Bundled sentences become several claims. Figure labels become claims. Traits that cannot be observed on a specimen (litter size, lifespan) are recorded too, marked as such, so that later steps can prove they were seen and deliberately left out.
+A harvester gets one source: a small text file per species and the figure crops, and nothing else. It works through the species one at a time, with only that species' file open. (The first run used one agent per species; the fixed cost of starting an agent, multiplied by a hundred, was most of the bill, so one agent per source it is.) It writes one line per claim the source makes about that species: the trait ("tail length relative to body"), the value as the source gives it ("over 2/3 of body length", "3–6 g"), how often the source says it holds (always, usually, rarely), the verbatim quote, and the printed page. Bundled sentences become several claims. Figure labels become claims. Traits that cannot be observed on a specimen (litter size, lifespan) are recorded too, marked as such, so that later steps can prove they were seen and deliberately left out. Two more things are marked: a trait the source presents as what distinguishes the species (a step in the printed key, "recognized by"), and a statement that the species cannot be told from another one ("no external differences from the common vole").
 
 A program then checks every line, parses the numbers and units ("3–6 g" becomes the range 3 to 6, unit grams), fills in the frequency word from the quote where the harvester left it open, removes duplicates and gives each claim a stable identifier. The harvester never designs anything and never judges what matters. That is the point: a list of what the book says, line by line, with a page number on each, is hard to argue with and easy to check against the page.
 
@@ -103,6 +103,10 @@ A trait the source gives numbers for - a length, a weight, a count on a scale, a
 ### Frequencies are weak priors
 
 For each claim, a program writes the statement in the key and the number that says how often the species shows that value. The number comes from one fixed table: always 1, usually 0.9, sometimes 0.4, rarely 0.1. Its only hard meaning is that zero excludes a species and anything above zero keeps it reachable. A rare form must still lead to the right species, and a 0.1 is enough for that; nothing in the pipeline argues about 0.8 versus 0.7, and sources are never made to vote on a number. Where a species shows exactly one of several states, nothing is written for the others: zero is implied, which keeps the files small.
+
+### What the source implies
+
+Two rules turn the book's own logic into statements, by program, never by invention. A trait the source presents as diagnostic for one species is, by that logic, absent in the other species the source describes: the beaver's flat tail is scored "flat" for the beaver and "not flat" for every other species, each pointing at the same quoted passage. And a species the source says cannot be told from another one gets that one's values for every trait the source does not state for it, again pointing at the quote; the two species then differ only where the sources differ, which is what the books said. Without these rules a key loses exactly the characters a field guide considers most useful.
 
 ### Provenance
 

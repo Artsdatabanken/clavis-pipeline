@@ -1,6 +1,6 @@
 ---
 name: digitize-clavis-key
-description: Turn one source's claims inventory (from harvest-claims) into a Clavis identification key for that source. Domain-agnostic and language-agnostic. Designs single-trait characters with determinable states, keeps every measurement as a numerical character with [min, max] per taxon, scores statements from the claims by script with provenance for every statement, and writes a decisions document. Use when the user asks to digitize a key, build a Clavis file from any identification reference, or convert a scanned or printed key into the Clavis format. Hand off to audit-clavis-key afterwards.
+description: Turns one source's claims inventory (from harvest-claims) into a Clavis identification key for that source. Domain-agnostic and language-agnostic. Designs single-trait characters with determinable states, keeps every measurement as a numerical character with [min, max] per taxon, scores statements from the claims by script with provenance for every statement, and writes a decisions document. Use when the user asks to digitize a key, build a Clavis file from any identification reference, or convert a scanned or printed key into the Clavis format. Hand off to audit-clavis-key afterwards.
 license: MIT
 compatibility: Python 3.11+. Needs the source's claims.jsonl from harvest-claims and tools/verify.py from the repository root. No network.
 metadata:
@@ -27,6 +27,16 @@ This skill is domain-agnostic and language-agnostic, and produces a **draft**. `
 - **Output path**: `work/<source>/<source>.<taxon-group>.json`, companions next to it.
 - **Metadata**: title, geography and licence come from the brief; `externalServices` only when the source provides external ids. A Clavis file in the same folder is an independent source, never a template.
 
+Progress checklist, copy it and tick as you go:
+
+```
+- [ ] 1 trait table from the claims; every trait -> character or skip reason
+- [ ] 2 design.json: characters, states with values, numerical units, absent states, same_as_excludes
+- [ ] 3 score_claims.py; residue down to skipped claims only
+- [ ] 4 generator -> key + provenance.jsonl + skipped.jsonl; verify.py and claims_vs_key.py at zero
+- [ ] 5 decisions.md and coverage note; hand off to audit-clavis-key
+```
+
 ## Step 1: Read the claims, group by trait
 
 Load the claims and list the distinct normalized traits with their values per taxon (a scratch script in `work/<source>/scratch/`; never in the sources folder). This table is your material. For each trait decide one of:
@@ -49,6 +59,8 @@ The design is a JSON file (`design.json`, format in `scripts/score_claims.py`), 
 - **Exclusive or non-exclusive**: habitats, signs, foods, "occurs in" lists are non-exclusive. Everything a specimen shows one of at a time is exclusive.
 - **Determinable** (see `determinability-pass`): a state is something one person with one specimen and the guide can pick, without a second specimen or experience. Comparatives ("darker than X", "larger") become absolute terms when the source allows, or are skipped with `comparative-unresolved`; shades collapse to a small palette ("rødbrun" and "rød" are one state unless two taxa are separated by that difference and a user could see it); bundles ("brown or grey") never become a state, they become two statements.
 - **Order** the characters by field-answerability: seen at a glance, then measurements, then habits and habitat, then in-hand details, then tracks and signs, then internal and microscopic.
+
+- **Absence and look-alikes.** A trait the source presents as diagnostic for one species (`diagnostic: true` on the claim) is lacking in the others it describes: give the character an `absent` state (its key in the design) and `score_claims.py` scores every other taxon on it, with the diagnostic claim as provenance. "Round tail" and "flat tail" are simply two states of one character. A claim with `same_as` ("cannot be told from X") makes the script copy X's statements onto this taxon wherever it has none; list in `same_as_excludes` the characters that must not be copied (location, counts of young).
 
 Taxa: a **flat list** of the species on the CSV, scientific name as in the list, vernacular name if the source gives one. No hierarchy; the merge builds it from the register and does the hoisting.
 

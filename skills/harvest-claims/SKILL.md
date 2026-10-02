@@ -1,6 +1,6 @@
 ---
 name: harvest-claims
-description: Extract every observable claim a source makes about each taxon into claims.jsonl, one claim per line with trait, value, qualifier, verbatim quote and page; numbers and units parsed, duplicates removed, stable ids. Runs before digitize-clavis-key (one job per taxon per source) and gives the audit and the final gate what they measure against. Also finds each taxon's pages and the figures in a source so harvesters read small files and crops, not whole books. Use when building a key, or when the user asks "did we miss anything in the book" or "where does this statement come from".
+description: Extracts every observable claim a source makes about each taxon into claims.jsonl, one claim per line with trait, value, qualifier, verbatim quote and page; parses numbers and units, marks diagnostic traits and look-alike statements, removes duplicates, assigns stable ids. Runs before digitize-clavis-key, one agent per source working taxon by taxon, and gives the audit and the final gate what they measure against. Also finds each taxon's pages and the figures in a source so the harvester reads small files and crops, not whole books. Use when building a key, or when the user asks "did we miss anything in the book" or "where does this statement come from".
 license: MIT
 compatibility: Python 3.11+. poppler (pdftotext, pdfimages, pdftoppm) for PDFs; pypdf as fallback for text. A model with vision for figure crops. Network only for taxon_names.py.
 metadata:
@@ -15,7 +15,7 @@ metadata:
 
 This skill does one thing: it turns a source into a flat inventory of claims. A claim is one observable thing the source says about one taxon: "tail longer than body", "weight 20–35 g", "belly usually white". No characters, no states, no frequencies, no decisions about what matters. Those come later, from this inventory, in `digitize-clavis-key`.
 
-Inside `build-clavis-key` this runs on every source before digitization (Phase 0c), and its check runs inside every audit and in the final gate. Why a separate job: a digitizer reading forty pages and designing a key at the same time skips things. A harvester that only has to list what one taxon's pages say, in a fresh context, with a verbatim quote for each line, is hard to argue with and easy to check against the page.
+Inside `build-clavis-key` this runs on every source before digitization, one harvester agent per source that works through the taxa one at a time, and its check runs inside every audit and in the final gate. Listing what one taxon's pages say, with a verbatim quote per line, is hard to argue with and easy to check against the page; designing the key is a different job for a different agent.
 
 ## Preparing a source (the orchestrator does this once per source)
 
@@ -24,20 +24,32 @@ Inside `build-clavis-key` this runs on every source before digitization (Phase 0
 3. **Pages per taxon.** `scripts/find_sections.py work/<source>/full.txt --taxa species.csv --names work/<source>/names.json --out work/<source>/` writes `pages.json` (the proposed section, the printed-page offset, each taxon's pages), `section.txt`, and one `<Taxon>.txt` per taxon. Confirm only the two edge pages of the section by reading them; extend the section if a taxon's description spills over. Taxa reported `NOT FOUND` or `outside section` need a look: a missing synonym in `names.json`, or the source does not treat them.
 4. **Figures.** `scripts/find_figures.py BOOK.pdf --pages <section> --text work/<source>/full.txt [--layout work/<source>/layout.json] --out work/<source>/figures.json --render work/<source>/figures/` lists every figure, plate and table with a page, a crop when a bounding box is known, and the caption text. Harvesters get these PNGs. Nobody renders or reads whole pages by default.
 
-Each harvester then receives: its `<Taxon>.txt`, the entries of `figures.json` whose pages fall inside its pages, the taxon name, and the output path. Nothing else.
+The harvester receives: the source's folder with the `<Taxon>.txt` files, `figures.json` with the crops, the taxon list in order, and the output folder. Nothing else; never a key, never another source.
 
-## The job, per taxon (the harvester)
+## The job (the harvester, one source, taxon by taxon)
 
-1. Read your taxon file. Every passage about the taxon counts: its description, its couplets in the printed key, its row in a comparison table, the figure crops listed for your pages with their labels.
+Progress checklist, copy it and tick as you go:
+
+```
+- [ ] taxon 1 … n: read <Taxon>.txt and its figure crops, write claims/<Taxon>.jsonl, run check_claims.py on it, fix rejections
+- [ ] merge: check_claims.py claims/*.checked.jsonl --out claims.jsonl
+- [ ] report: claims per taxon, pages read, taxa with fewer than 5 claims
+```
+
+For each taxon in turn, with only that taxon's file open:
+
+1. Read the taxon file. Every passage about the taxon counts: its description, its couplets in the printed key, its row in a comparison table, the figure crops listed for your pages with their labels.
 2. Write one claim per observable assertion. Split bundled sentences: "stem hairy, leaves toothed, flowers yellow" is three claims; "usually white, rarely grey" is two claims with their own qualifiers. Keep the qualifier the source uses (always, usually, sometimes, rarely, or a range). Keep the verbatim quote, in the source language, and the printed page from the page marker.
 3. Measurements are written as the source gives them, with the unit: `3–6 g`, `opptil 2,5 cm`, `over 24 mm`. The checker parses them; do not convert or round.
 4. Comparative claims ("larger than X", "darker than the field vole") are claims about this taxon; record the comparison in `value` as stated, qualifier `comparative`. Do not resolve it into absolute terms; that is a later decision.
+   - When the source says the taxon **cannot be told from another one** ("ingen ytre forskjeller fra sørmarkmus", "meget lik markmus", "indistinguishable from"), write one claim with `same_as` set to that taxon's scientific name (look it up on the same pages or in the taxon list; never guess). The digitizer then gives this taxon the look-alike's values for every trait the source does not state for it.
+   - When the source presents a trait as **what distinguishes** the taxon (a couplet in the printed key; wording like "kjennetegnes ved", "skilles fra ... ved", "the only species with"), set `diagnostic: true`. A diagnostic trait is, by the source's own logic, lacking in the other species it describes; the digitizer scores them absent.
 5. Figure labels count. Read the crop with vision and record each labeled feature as a claim with `kind: "figure"`, `quote` set to the label text and `page` to the plate.
 6. Claims that cannot be observed on a specimen or find (litter size, lifespan, diet) are still recorded, with `observable: false`. The key design decides what to drop, and the final audit needs to know they were seen.
 7. Open a whole page image only when the text for that page is unreadable (OCR garbage). Do not read other taxa's pages, and add nothing from your own knowledge. A claim without a quote is not a claim.
 8. Write `work/<source>/claims/<Taxon>.jsonl` (fields in `references/claim-schema.md`), then run `scripts/check_claims.py work/<source>/claims/<Taxon>.jsonl --out work/<source>/claims/<Taxon>.checked.jsonl --lang <source language>` and fix what it rejects. A claim it marks `note: quote carries more than one frequency word` must be split into one claim per value. Report the number of claims and the pages you read.
 
-The orchestrator merges all taxa with the same script into `work/<source>/claims.jsonl`: `scripts/check_claims.py work/<source>/claims/*.checked.jsonl --out work/<source>/claims.jsonl --lang <lang>`. It normalizes, parses `value_num` and `unit`, fills missing qualifiers from the quote, drops duplicates and assigns stable ids.
+When every taxon is done, merge: `scripts/check_claims.py work/<source>/claims/*.checked.jsonl --out work/<source>/claims.jsonl --lang <lang>`. The script normalizes, parses `value_num` and `unit`, fills missing qualifiers and `diagnostic` from the quote, reminds you where a quote reads like a look-alike statement without `same_as`, drops duplicates and assigns stable ids.
 
 ## Checking a key against the claims
 

@@ -1,6 +1,6 @@
 ---
 name: merge-clavis-keys
-description: Merge several independently digitized and audited Clavis keys into one key that provably preserves every source's information. Union-first (equal weight per source), one spec file for the character concordance and per-source state maps, intersection-first reconciliation with every asserted value kept on real disagreement, numerical characters merged as the union of ranges, hierarchy from a taxonomy-register adapter, measured coarsening and location cleanup, and a zero-loss round-trip against every source. Use when the user asks to combine, merge, or collate multiple Clavis keys covering the same taxa. Requires the source keys to be audited first.
+description: Merges several independently digitized and audited Clavis keys into one key that provably preserves every source's information. Union-first (equal weight per source), one spec file for the character concordance and per-source state maps, intersection-first reconciliation with every asserted value kept on real disagreement, numerical characters merged as the union of ranges, hierarchy from a taxonomy-register adapter, measured coarsening and location cleanup, and a zero-loss round-trip against every source. Use when the user asks to combine, merge, or collate multiple Clavis keys covering the same taxa. Requires the source keys to be audited first.
 license: MIT
 compatibility: Python 3.11+ and network access to a taxonomy register through adapters/taxonomy/.
 metadata:

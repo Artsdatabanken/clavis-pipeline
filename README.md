@@ -22,7 +22,7 @@ For the reasoning behind the design, read `docs/clavis-agentic-workflow.md` firs
 AGENTS.md   what any AI agent reads first; CLAUDE.md points Claude Code at it
 guides/     one page per harness and model: what is validated, what is reported, the feedback template
 skills/     one folder per step; SKILL.md is the procedure, references/ the detail it links to, scripts/ its code
-agents/     three agent definitions for Claude Code: harvester (one per taxon per source), digitizer (one per source), auditor (one per draft)
+agents/     three agent definitions for Claude Code: harvester (one per source, taxon by taxon), digitizer (one per source), auditor (one per draft)
 adapters/   everything that talks to a taxonomy register or national list; NorTaxa is the example
 sources/    downloaders and scrapers for particular places material comes from (nb.no, Naturalis, artfakta)
 tools/      generic helpers: OCR, verifier, refiner
@@ -37,7 +37,7 @@ The steps, in the order they run:
 | Step | Skill | What it does |
 |---|---|---|
 | 1 | `build-clavis-key` | Orchestrates everything below for a target taxon and a folder of sources. Species list through an adapter (Norway: NorTaxa plus the alien-species list), one preparation per source, one harvester per taxon per source, one digitizer per source, one fresh auditor per draft, merge, determinability pass, then the gate loop and the cost report. |
-| 2 | `harvest-claims` | Prepares a source (text once, each taxon's pages, the figures as crops) and lists every observable claim per taxon with quote and page into `claims.jsonl`; numbers and units parsed, duplicates removed. Checks a finished key in both directions: every statement traces to a claim, every claim reached the key or a skipped list. |
+| 2 | `harvest-claims` | Prepares a source (text once, each taxon's pages, the figures as crops) and lists every observable claim per taxon with quote and page into `claims.jsonl`; numbers and units parsed, diagnostic traits and look-alike statements marked, duplicates removed. One agent per source. Checks a finished key in both directions: every statement traces to a claim, every claim reached the key or a skipped list. |
 | 3 | `digitize-clavis-key` | One source's claims in, one key out. Designs single-trait characters with determinable states and numerical characters for every measurement; a script scores the statements from the claims with provenance; flat taxon list. |
 | 4 | `audit-clavis-key` | Fresh agent: verifier, claims audit, range checks, coverage test, then partition, type and determinability review on the flagged rows only; loops on fixes until every check is at zero. |
 | 5 | `refine-clavis-key` | Structural cleanup of a key from a transcoder (matrix export, web scrape): couplets decomposed per taxon along its path, duplicate characters merged, bundled states split, bins to numerical characters. |

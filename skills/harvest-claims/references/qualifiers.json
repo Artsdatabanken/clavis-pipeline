@@ -1,57 +1,373 @@
 {
-  "_comment": "Words that mark how often a trait holds, per ISO 639-1 language. Used by check_claims.py to fill in `qualifier` when the harvester left it unspecified, and by score_claims.py to turn a qualifier into a frequency through frequency-table.json. Add languages as sources arrive.",
+  "_comment": "Words that mark how often a trait holds, per ISO 639-1 language. Used by check_claims.py to fill in `qualifier` when the harvester left it unspecified, and by score_claims.py to turn a qualifier into a frequency through frequency-table.json. Add languages as sources arrive. `same_as` words mark a claim that a taxon cannot be told from another one (the harvester then sets same_as to that taxon's name); `diagnostic` words mark a trait the source presents as what distinguishes the taxon (check_claims.py sets diagnostic: true; a claim from a printed key couplet is diagnostic by kind).",
   "en": {
-    "always": ["always", "invariably", "constantly"],
-    "usually": ["usually", "mostly", "generally", "typically", "normally", "as a rule", "often", "commonly"],
-    "sometimes": ["sometimes", "occasionally", "at times", "may be", "can be", "or", "varies"],
-    "rarely": ["rarely", "seldom", "exceptionally", "very rarely", "in rare cases"]
+    "always": [
+      "always",
+      "invariably",
+      "constantly"
+    ],
+    "usually": [
+      "usually",
+      "mostly",
+      "generally",
+      "typically",
+      "normally",
+      "as a rule",
+      "often",
+      "commonly"
+    ],
+    "sometimes": [
+      "sometimes",
+      "occasionally",
+      "at times",
+      "may be",
+      "can be",
+      "or",
+      "varies"
+    ],
+    "rarely": [
+      "rarely",
+      "seldom",
+      "exceptionally",
+      "very rarely",
+      "in rare cases"
+    ],
+    "same_as": [
+      "cannot be distinguished from",
+      "indistinguishable from",
+      "no external differences",
+      "identical to",
+      "very similar to",
+      "closely resembles"
+    ],
+    "diagnostic": [
+      "distinguished from",
+      "distinguishes it",
+      "characteristic",
+      "the only",
+      "unlike",
+      "in contrast to",
+      "easily recognized by",
+      "diagnostic"
+    ]
   },
   "nb": {
-    "always": ["alltid", "bestandig"],
-    "usually": ["vanligvis", "oftest", "som regel", "stort sett", "gjerne", "ofte", "for det meste", "i regelen"],
-    "sometimes": ["av og til", "iblant", "noen ganger", "kan være", "stundom", "eller", "varierer", "enkelte"],
-    "rarely": ["sjelden", "sjeldent", "unntaksvis", "svært sjelden", "i sjeldne tilfeller"]
+    "always": [
+      "alltid",
+      "bestandig"
+    ],
+    "usually": [
+      "vanligvis",
+      "oftest",
+      "som regel",
+      "stort sett",
+      "gjerne",
+      "ofte",
+      "for det meste",
+      "i regelen"
+    ],
+    "sometimes": [
+      "av og til",
+      "iblant",
+      "noen ganger",
+      "kan være",
+      "stundom",
+      "eller",
+      "varierer",
+      "enkelte"
+    ],
+    "rarely": [
+      "sjelden",
+      "sjeldent",
+      "unntaksvis",
+      "svært sjelden",
+      "i sjeldne tilfeller"
+    ],
+    "same_as": [
+      "ingen ytre forskjeller",
+      "kan ikke skilles fra",
+      "meget lik",
+      "svært lik",
+      "identisk med",
+      "ligner til forveksling",
+      "vanskelig å skille fra"
+    ],
+    "diagnostic": [
+      "kjennetegnes ved",
+      "skilles fra",
+      "eneste",
+      "i motsetning til",
+      "karakteristisk",
+      "lett kjennelig på",
+      "kjennes på",
+      "typisk for"
+    ]
   },
   "nn": {
-    "always": ["alltid", "støtt"],
-    "usually": ["vanlegvis", "oftast", "som regel", "stort sett", "gjerne", "ofte", "for det meste"],
-    "sometimes": ["av og til", "iblant", "somme tider", "kan vere", "stundom", "eller", "varierer"],
-    "rarely": ["sjeldan", "unntaksvis", "svært sjeldan"]
+    "always": [
+      "alltid",
+      "støtt"
+    ],
+    "usually": [
+      "vanlegvis",
+      "oftast",
+      "som regel",
+      "stort sett",
+      "gjerne",
+      "ofte",
+      "for det meste"
+    ],
+    "sometimes": [
+      "av og til",
+      "iblant",
+      "somme tider",
+      "kan vere",
+      "stundom",
+      "eller",
+      "varierer"
+    ],
+    "rarely": [
+      "sjeldan",
+      "unntaksvis",
+      "svært sjeldan"
+    ],
+    "same_as": [
+      "ingen ytre skilnader",
+      "kan ikkje skiljast frå",
+      "svært lik",
+      "identisk med"
+    ],
+    "diagnostic": [
+      "kjenneteiknast ved",
+      "skiljast frå",
+      "einaste",
+      "i motsetnad til",
+      "karakteristisk",
+      "kjennast på"
+    ]
   },
   "sv": {
-    "always": ["alltid", "ständigt"],
-    "usually": ["vanligtvis", "oftast", "i regel", "mestadels", "gärna", "ofta", "för det mesta"],
-    "sometimes": ["ibland", "stundom", "kan vara", "eller", "varierar", "emellanåt"],
-    "rarely": ["sällan", "undantagsvis", "mycket sällan"]
+    "always": [
+      "alltid",
+      "ständigt"
+    ],
+    "usually": [
+      "vanligtvis",
+      "oftast",
+      "i regel",
+      "mestadels",
+      "gärna",
+      "ofta",
+      "för det mesta"
+    ],
+    "sometimes": [
+      "ibland",
+      "stundom",
+      "kan vara",
+      "eller",
+      "varierar",
+      "emellanåt"
+    ],
+    "rarely": [
+      "sällan",
+      "undantagsvis",
+      "mycket sällan"
+    ],
+    "same_as": [
+      "kan inte skiljas från",
+      "mycket lik",
+      "identisk med",
+      "inga yttre skillnader"
+    ],
+    "diagnostic": [
+      "kännetecknas av",
+      "skiljs från",
+      "enda",
+      "till skillnad från",
+      "karakteristisk",
+      "känns igen på"
+    ]
   },
   "da": {
-    "always": ["altid"],
-    "usually": ["sædvanligvis", "oftest", "som regel", "for det meste", "ofte", "normalt"],
-    "sometimes": ["undertiden", "af og til", "somme tider", "kan være", "eller", "varierer"],
-    "rarely": ["sjældent", "undtagelsesvis", "meget sjældent"]
+    "always": [
+      "altid"
+    ],
+    "usually": [
+      "sædvanligvis",
+      "oftest",
+      "som regel",
+      "for det meste",
+      "ofte",
+      "normalt"
+    ],
+    "sometimes": [
+      "undertiden",
+      "af og til",
+      "somme tider",
+      "kan være",
+      "eller",
+      "varierer"
+    ],
+    "rarely": [
+      "sjældent",
+      "undtagelsesvis",
+      "meget sjældent"
+    ],
+    "same_as": [
+      "kan ikke skelnes fra",
+      "meget lig",
+      "identisk med"
+    ],
+    "diagnostic": [
+      "kendetegnes ved",
+      "adskilles fra",
+      "eneste",
+      "i modsætning til",
+      "karakteristisk",
+      "kendes på"
+    ]
   },
   "de": {
-    "always": ["immer", "stets", "ausnahmslos"],
-    "usually": ["meist", "meistens", "gewöhnlich", "in der Regel", "überwiegend", "oft", "häufig", "normalerweise"],
-    "sometimes": ["manchmal", "gelegentlich", "zuweilen", "bisweilen", "kann", "oder", "variiert"],
-    "rarely": ["selten", "ausnahmsweise", "sehr selten"]
+    "always": [
+      "immer",
+      "stets",
+      "ausnahmslos"
+    ],
+    "usually": [
+      "meist",
+      "meistens",
+      "gewöhnlich",
+      "in der Regel",
+      "überwiegend",
+      "oft",
+      "häufig",
+      "normalerweise"
+    ],
+    "sometimes": [
+      "manchmal",
+      "gelegentlich",
+      "zuweilen",
+      "bisweilen",
+      "kann",
+      "oder",
+      "variiert"
+    ],
+    "rarely": [
+      "selten",
+      "ausnahmsweise",
+      "sehr selten"
+    ],
+    "same_as": [
+      "nicht zu unterscheiden von",
+      "sehr ähnlich",
+      "identisch mit",
+      "keine äußeren Unterschiede"
+    ],
+    "diagnostic": [
+      "gekennzeichnet durch",
+      "unterscheidet sich von",
+      "einzige",
+      "im Gegensatz zu",
+      "charakteristisch",
+      "erkennbar an"
+    ]
   },
   "nl": {
-    "always": ["altijd", "steeds"],
-    "usually": ["meestal", "gewoonlijk", "doorgaans", "in de regel", "vaak", "normaal", "overwegend"],
-    "sometimes": ["soms", "af en toe", "nu en dan", "kan", "of", "varieert", "bij tijd en wijle"],
-    "rarely": ["zelden", "bij uitzondering", "zeer zelden"]
+    "always": [
+      "altijd",
+      "steeds"
+    ],
+    "usually": [
+      "meestal",
+      "gewoonlijk",
+      "doorgaans",
+      "in de regel",
+      "vaak",
+      "normaal",
+      "overwegend"
+    ],
+    "sometimes": [
+      "soms",
+      "af en toe",
+      "nu en dan",
+      "kan",
+      "of",
+      "varieert",
+      "bij tijd en wijle"
+    ],
+    "rarely": [
+      "zelden",
+      "bij uitzondering",
+      "zeer zelden"
+    ],
+    "same_as": [
+      "niet te onderscheiden van",
+      "zeer gelijkend",
+      "identiek aan",
+      "geen uiterlijke verschillen"
+    ],
+    "diagnostic": [
+      "gekenmerkt door",
+      "onderscheidt zich van",
+      "enige",
+      "in tegenstelling tot",
+      "kenmerkend",
+      "herkenbaar aan"
+    ]
   },
   "fr": {
-    "always": ["toujours", "invariablement"],
-    "usually": ["généralement", "habituellement", "le plus souvent", "d'ordinaire", "souvent", "en règle générale"],
-    "sometimes": ["parfois", "quelquefois", "à l'occasion", "peut être", "ou", "variable"],
-    "rarely": ["rarement", "exceptionnellement", "très rarement"]
+    "always": [
+      "toujours",
+      "invariablement"
+    ],
+    "usually": [
+      "généralement",
+      "habituellement",
+      "le plus souvent",
+      "d'ordinaire",
+      "souvent",
+      "en règle générale"
+    ],
+    "sometimes": [
+      "parfois",
+      "quelquefois",
+      "à l'occasion",
+      "peut être",
+      "ou",
+      "variable"
+    ],
+    "rarely": [
+      "rarement",
+      "exceptionnellement",
+      "très rarement"
+    ]
   },
   "es": {
-    "always": ["siempre", "invariablemente"],
-    "usually": ["generalmente", "normalmente", "habitualmente", "por lo general", "a menudo", "frecuentemente"],
-    "sometimes": ["a veces", "ocasionalmente", "en ocasiones", "puede ser", "o", "variable"],
-    "rarely": ["raramente", "rara vez", "excepcionalmente", "muy raramente"]
+    "always": [
+      "siempre",
+      "invariablemente"
+    ],
+    "usually": [
+      "generalmente",
+      "normalmente",
+      "habitualmente",
+      "por lo general",
+      "a menudo",
+      "frecuentemente"
+    ],
+    "sometimes": [
+      "a veces",
+      "ocasionalmente",
+      "en ocasiones",
+      "puede ser",
+      "o",
+      "variable"
+    ],
+    "rarely": [
+      "raramente",
+      "rara vez",
+      "excepcionalmente",
+      "muy raramente"
+    ]
   }
 }

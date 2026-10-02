@@ -15,8 +15,13 @@ design.json is what the digitizer writes instead of an assignment map:
      "states": [{"key": "white", "title": {"nb": "hvit"}, "values": ["hvit", "hvitaktig", "white"]},
                 {"key": "grey",  "title": {"nb": "grå"},  "values": ["grå", "gråaktig"]}],
      "traits": ["bukfarge", "undersidens farge"]},
+    {"key": "tail_flat", "title": {"nb": "Flat hale"}, "type": "exclusive", "absent": "no",
+     "states": [{"key": "yes", "title": {"nb": "ja"}, "values": ["flat", "flattrykt"]},
+                {"key": "no",  "title": {"nb": "nei"}, "values": ["rund", "ikke flat"]}],
+     "traits": ["haleform", "flat hale"]},
     ...
   ],
+  "same_as_excludes": ["distribution", "litter"],
   "frequency_table": "optional path; default skills/harvest-claims/references/frequency-table.json"
 }
 
@@ -39,6 +44,18 @@ Rules (all mechanical):
   * a claim that matches no character, or matches a character but no state,
     goes to the residue list for the digitizer to decide: add a state, add a
     `values` synonym, or skip with a reason.
+  * DIAGNOSTIC traits imply absence elsewhere: when a character in the design
+    names an `absent` state (its key), and a claim scored on it is
+    `diagnostic: true` (the source presents the trait as what distinguishes
+    the taxon), every other design taxon with no claim on that character gets
+    the absent state, provenance = the diagnostic claim. A trait that is
+    diagnostic for one species is, by the source's own logic, lacking in the
+    others it describes. Exclusive characters only.
+  * SAME-AS: a claim with `same_as: "<scientific name>"` (the source says the
+    taxon cannot be told from that one) copies, for every character the taxon
+    has no statement on, the other taxon's statements, provenance = the
+    same-as claim plus the copied statements' claims. Characters listed in the
+    design's `same_as_excludes` (location, counts of young) are not copied.
 
 Outputs: scored.json = {"characters": [...Clavis characters with fresh ids...],
 "taxa": [...], "statements": [...], "provenance": [...]}; the digitizer's
@@ -120,6 +137,17 @@ def main() -> int:
             trait_index.setdefault(norm(tr), []).append(c)
 
     stmts, prov, residue = [], [], []
+    diagnostic_hits = defaultdict(list)   # char id -> [claim id] for diagnostic claims scored on it
+    same_as = defaultdict(list)           # taxon id -> [(target taxon id, claim id)]
+    absent_state = {}
+    for c in design["characters"]:
+        if c.get("absent") and c.get("type", "exclusive") == "exclusive":
+            for s_ in c["states"]:
+                if s_["key"] == c["absent"]:
+                    node = next(x for x in chars_out if x["id"] == c["_id"])
+                    absent_state[c["_id"]] = next(sn["id"] for sn in node["states"] if sn["title"] == s_["title"])
+    excludes = {k for k in design.get("same_as_excludes", [])}
+    exclude_ids = {c["_id"] for c in design["characters"] if c["key"] in excludes}
     numeric_acc = defaultdict(lambda: defaultdict(list))  # (taxon id, char id) -> [(lo, hi, claim id)]
     cat_acc = defaultdict(lambda: defaultdict(list))      # (taxon id, char id) -> state id -> [(freq, claim id)]
     for cl in claims:
@@ -128,6 +156,13 @@ def main() -> int:
         t = tid.get(norm(cl["taxon"]))
         if not t:
             residue.append((cl, "taxon not in design"))
+            continue
+        if cl.get("same_as"):
+            target = tid.get(norm(cl["same_as"]))
+            if target and target != t:
+                same_as[t].append((target, cl["id"]))
+            else:
+                residue.append((cl, "same_as names a taxon not in the design"))
             continue
         cands = trait_index.get(norm(cl["trait"]))
         if not cands:
@@ -158,6 +193,8 @@ def main() -> int:
                 f1 = ft.get("_secondary", {}).get(q, 1.0) if q in ft.get("_secondary", {}) else ft["_secondary"].get("or", 1.0)
                 for k, (sid, _) in enumerate(hit):
                     cat_acc[(t, c["_id"])][sid].append((f0 if k == 0 or c.get("type") == "non-exclusive" else f1, cl["id"]))
+                if cl.get("diagnostic") and absent_state.get(c["_id"]):
+                    diagnostic_hits[c["_id"]].append(cl["id"])
                 placed = True
         if not placed:
             residue.append((cl, "character found, no state matches the value (add a state or a synonym, or skip with a reason)"))
@@ -196,6 +233,14 @@ def main() -> int:
         prov.append({"statement": sid, "claims": [cl for _, _, cl in rs]})
         c["min"] = min(c.get("min", lo), lo)
         c["max"] = max(c.get("max", hi), hi)
+    # implied absence: a diagnostic trait is lacking in every other taxon the
+    # source describes (that is what makes it diagnostic)
+    implied = 0
+    for cid, claim_ids in diagnostic_hits.items():
+        for t in tid.values():
+            if (t, cid) not in cat_acc:
+                cat_acc[(t, cid)][absent_state[cid]].append((1.0, claim_ids[0]))
+                implied += 1
     for (t, cid), by_state in cat_acc.items():
         for sid, lst in by_state.items():
             f = round(max(x for x, _ in lst), 4)
@@ -203,6 +248,21 @@ def main() -> int:
             stmts.append({"id": st, "taxon": t, "character": cid, "value": sid, "frequency": f})
             prov.append({"statement": st, "claims": sorted({cl for _, cl in lst})})
 
+    # same-as: copy the look-alike's statements where this taxon has none
+    copied = 0
+    by_tc = defaultdict(list)
+    for st_, pv in zip(stmts, prov):
+        by_tc[(st_["taxon"], st_["character"])].append((st_, pv))
+    for t, targets in same_as.items():
+        for target, claim_id in targets:
+            for (tt, cid), lst in list(by_tc.items()):
+                if tt != target or cid in exclude_ids or (t, cid) in by_tc:
+                    continue
+                for st_, pv in lst:
+                    nid = "statement:" + uuid.uuid4().hex
+                    new = dict(st_, id=nid, taxon=t)
+                    stmts.append(new); prov.append({"statement": nid, "claims": [claim_id] + pv["claims"], "note": "copied: source says the taxon cannot be told from " + next(x["scientificName"] for x in taxa_out if x["id"] == target)})
+                    by_tc[(t, cid)].append((new, prov[-1])); copied += 1
     out = {"taxa": taxa_out, "characters": chars_out, "statements": stmts, "provenance": prov}
     a.out.write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
     if a.residue:
@@ -210,7 +270,7 @@ def main() -> int:
         for cl, why in residue:
             lines.append(f"- `{cl.get('id', '?')}` {cl.get('taxon', '?')} p.{cl.get('page', '?')}: {cl.get('trait')} = {cl.get('value')}  ({why})")
         a.residue.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    print(f"{len(stmts)} statements from {len(claims) - len(residue)} claims; {len(residue)} in residue -> {a.out}")
+    print(f"{len(stmts)} statements from {len(claims) - len(residue)} claims ({implied} implied absent from diagnostic traits, {copied} copied from look-alikes); {len(residue)} in residue -> {a.out}")
     return 0
 
 

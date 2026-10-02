@@ -15,6 +15,9 @@ What it does to every claim, deterministically:
     not parsed (a ratio in words, not a measurement).
   - sets `qualifier` from the quote when the harvester left it unspecified,
     using the per-language word list in references/qualifiers.json
+  - sets `diagnostic: true` when the claim comes from a key couplet or the
+    quote presents the trait as distinguishing; reminds the harvester to set
+    `same_as` when the quote says the taxon cannot be told from another
   - drops claims whose normalized (source, taxon, trait, value, page) repeats
 Exits 1 if anything was rejected. Prints counts per taxon.
 """
@@ -145,6 +148,14 @@ def main() -> int:
                     c["note"] = "quote carries more than one frequency word; split into one claim per value"
                 elif g:
                     c["qualifier"] = g
+            # diagnostic: the source presents the trait as what distinguishes the
+            # taxon (a couplet from the printed key, or wording like "skilles fra ... ved")
+            if "diagnostic" not in c:
+                c["diagnostic"] = c["kind"] == "key" or any(f" {norm(w)} " in f" {norm(c['quote'])} " for w in words.get("diagnostic", []))
+            # same_as: the source says the taxon cannot be told from another one;
+            # the harvester names the other taxon in `same_as`, the checker only reminds
+            if "same_as" not in c and any(f" {norm(w)} " in f" {norm(c['quote'])} " for w in words.get("same_as", [])):
+                c["note"] = (c.get("note", "") + " quote says this taxon cannot be told from another; set same_as to that taxon's scientific name if so").strip()
             cid = claim_id(c)
             if cid in claims:
                 dupes += 1

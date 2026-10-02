@@ -1,6 +1,6 @@
 ---
 name: audit-clavis-key
-description: Audit and correct a draft Clavis identification-key JSON against the claims harvested from its source. Domain-agnostic and language-agnostic. Runs the deterministic verifier and the claims audit (every statement traces to a claim, every claim reached the key or was skipped with a reason), then checks state partitions, numerical characters and determinability, and loops on fixes until every check is at zero. Use after digitize-clavis-key, or when a user asks to review, verify or correct an existing Clavis file. Enters fresh; never generates content from scratch.
+description: Audits and corrects a draft Clavis identification-key JSON against the claims harvested from its source. Domain-agnostic and language-agnostic. Runs the deterministic verifier and the claims audit (every statement traces to a claim, every claim reached the key or was skipped with a reason), then checks state partitions, numerical characters and determinability, and loops on fixes until every check is at zero. Use after digitize-clavis-key, or when a user asks to review, verify or correct an existing Clavis file. Enters fresh; never generates content from scratch.
 license: MIT
 compatibility: Python 3.11+. Needs tools/verify.py and the harvest-claims scripts from the repository. No network.
 metadata:
@@ -23,6 +23,16 @@ You enter with no extraction commitments to defend. The digitizer designed and s
 - The source text and figure crops under `work/<source>/`, for the few claims whose quote does not settle a question.
 
 **Language.** Companions (`<key>.audit-findings.md`, the updated character-audit table) are written in the key's language, for its domain experts. Markdown throughout; PDF only at the end of the whole run and only when the converter's dependencies are present.
+
+Progress checklist, copy it and tick as you go:
+
+```
+- [ ] 1 verify.py, claims_vs_key.py, check_bins.py, coverage_test.py
+- [ ] 2 partition and type on the flagged rows
+- [ ] 3 determinability flags
+- [ ] 4 fixes through design.json; phase 1 again until 0/0
+- [ ] findings document with numbers before and after
+```
 
 ## Phase 1: Deterministic checks (scripts, no judgment)
 
