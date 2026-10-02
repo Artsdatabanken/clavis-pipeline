@@ -57,7 +57,7 @@ Read `references/phase-2-disjointness.md`. For every categorical character, Test
 ## Phase 3: Determinability (judgment, on the flagged rows only)
 
 ```
-python3 <repo>/skills/determinability-pass/scripts/flag_undeterminable.py KEY.json --out KEY.determinability.md
+python3 <repo>/skills/determinability-pass/scripts/flag_undeterminable.py KEY.json --claims claims.jsonl --provenance provenance.jsonl --out KEY.determinability.md
 ```
 
 For every flag: can one person, with one specimen and the guide, no comparison specimen and no experience, pick the state? Comparatives become absolute terms (from the claims' numbers or wording) or the claim is skipped with `comparative-unresolved`; shades merge to a palette a user can name; bundles split; relative words without numbers stay only when nothing else separates the taxa, with a line in the findings. The determinability pass runs again on the merged key; the fewer flags you leave, the less it has to do.

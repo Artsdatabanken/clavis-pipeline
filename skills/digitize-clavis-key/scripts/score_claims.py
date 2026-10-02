@@ -32,9 +32,9 @@ Rules (all mechanical):
     value [min, max] (an open upper bound becomes the character's max, an
     open lower bound its min; the design may set `min`/`max`, else they are
     taken from the data). Several claims for one taxon -> the union of ranges.
-  * categorical character: each `values` entry is matched against the claim's
-    normalized value by equality, or by whole-word containment when the claim
-    value lists alternatives ("hvit eller grå" matches both states);
+  * categorical character: a state's `values` entries are matched against the
+    claim's normalized value by equality, or against each entry of the claim's
+    own `values` list when the harvester recorded alternatives ("A or B");
     frequency = frequency_table[qualifier]; with several matched states the
     first gets the qualifier's frequency and the others the `_secondary` one
   * non-exclusive characters: every matched state gets its frequency; nothing
@@ -179,14 +179,10 @@ def main() -> int:
                                                         None if vn[1] is None else vn[1] * f, cl["id"]))
                 placed = True
             else:
-                v = norm(cl["value"])
-                words = f" {v} "
-                # an exact match on the whole value wins: "ikke hareskår" must not
-                # also score "hareskår", "grålig hvit" not also "hvit"
-                hit = [(sid, vals) for sid, vals in state_index[c["key"]] if v in vals]
-                if not hit and re.search(r"\b(eller|or|og|and|oder|of|ou|o|til|to|bis|tot|à)\b|[/,–]", cl["value"], re.I):
-                    # the claim lists alternatives ("hvit eller grå"): each listed value may match a state
-                    hit = [(sid, vals) for sid, vals in state_index[c["key"]] if any(f" {x} " in words for x in vals if x)]
+                # exact match on the whole value, or on each entry of the claim's
+                # `values` list when the harvester recorded alternatives ("A or B")
+                alts = [norm(x) for x in cl["values"]] if isinstance(cl.get("values"), list) else [norm(cl["value"])]
+                hit = [(sid, vals) for sid, vals in state_index[c["key"]] if any(x in vals for x in alts)]
                 if not hit:
                     continue
                 q = cl.get("qualifier", "unspecified")

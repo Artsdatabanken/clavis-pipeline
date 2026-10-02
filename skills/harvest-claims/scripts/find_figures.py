@@ -12,9 +12,9 @@ Backends, tried in this order, results merged per page:
   2. pdfimages -list (poppler): embedded images per page with their size.
      Born-digital PDFs list each illustration; a scanned book lists one
      page-sized image per page, which is ignored (covers > 80% of the page).
-  3. The text layer: caption words ("Fig.", "Pl.", "Tab.", "Foto", "Tegn.",
-     "Figur", "Plansje", "Abb.", "Afb.") and pages whose text is much shorter
-     than their neighbours (a full-page plate).
+  3. The text layer: pages whose text is much shorter than their neighbours
+     (a full-page plate). No caption words of any language; short lines ending
+     in a number on such a page are attached as caption text.
 
 Output: figures.json = [{"page": N, "bbox": [x0, y0, x1, y1] | null, "source": "layout|pdfimages|caption|sparse", "caption": "..."}]
 With --render, each figure with a bbox is cropped to PNG (pdftoppm), and a
@@ -33,9 +33,10 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-# a caption reference: the word AND a number ("Fig. 3", "Plansje 12", "Tab. 2"); bare words
-# like "tegn" or "pl" are ordinary text
-CAPTION = re.compile(r"\b(fig\.?|figur|figure|pl\.?|plansje|plate|tab\.?|tabell|table|foto|photo|tegning|abb\.?|afb\.?|bild)\s*\.?\s*\d+", re.I)
+# No caption words: a figure is found by Surya's layout (scans) or the PDF's
+# embedded images (born-digital), and by pages whose text is much shorter than
+# their neighbours. Caption text is attached when a short line ends in a number.
+CAPTION = re.compile(r"^\s*\S{1,12}\.?\s*\d{1,3}\b.{0,80}$")
 
 
 def parse_range(s: str) -> tuple[int, int]:
@@ -108,12 +109,10 @@ def from_text(text_path: Path, lo: int, hi: int) -> list[dict]:
     lengths = {i: len(p.strip()) for i, p in enumerate(pages, 1)}
     for i in range(lo, min(hi, len(pages)) + 1):
         p = pages[i - 1]
-        caps = [m.group(0) for m in CAPTION.finditer(p)]
-        if caps:
-            out.append({"page": i, "bbox": None, "source": "caption", "caption": "; ".join(dict.fromkeys(caps))[:120]})
+        caps = [l.strip() for l in p.splitlines() if CAPTION.match(l.strip())][:3]   # attached as text, never a signal by itself
         neigh = [lengths.get(j, 0) for j in (i - 2, i - 1, i + 1, i + 2) if j in lengths]
         if neigh and lengths[i] < 0.35 * (sum(neigh) / len(neigh)) and lengths[i] < 1500:
-            out.append({"page": i, "bbox": None, "source": "sparse", "caption": ""})
+            out.append({"page": i, "bbox": None, "source": "sparse", "caption": "; ".join(caps)})
     return out
 
 

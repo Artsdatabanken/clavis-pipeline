@@ -25,7 +25,7 @@ a = ap.parse_args()
 d = json.load(open(a.union, encoding="utf-8"))
 T = lambda o: next(iter((o.get("title") or {}).values()), "")
 def norm(s): return re.sub(r"[\s\-–—/,;:.()\[\]]+", " ", unicodedata.normalize("NFKC", s).lower()).strip()
-STOP = {"i", "på", "av", "the", "of", "in", "and", "og", "eller", "or", "med", "with", "til", "to", "der", "die", "das", "van", "de"}
+STOP = set()
 def toks(s): return {w for w in norm(s).split() if w not in STOP and len(w) > 2}
 gl = {}
 if a.glossary:
@@ -33,6 +33,9 @@ if a.glossary:
         for v in [k] + vs: gl[norm(v)] = norm(k)
 
 chars = d["characters"]
+_tf = collections.Counter()
+for _c in chars: _tf.update({w for w in norm(T(_c)).split() if len(w) > 2})
+STOP.update(w for w, n in _tf.items() if n > len(chars) / 3)   # words in over a third of all titles carry no meaning
 src = {c["id"]: T(c).rsplit(" [", 1)[1].rstrip("]") for c in chars}
 title = {c["id"]: T(c).rsplit(" [", 1)[0] for c in chars}
 labels = {c["id"]: {norm(T(s)) for s in (c.get("states") or [])} for c in chars}

@@ -124,7 +124,8 @@ def main() -> int:
         print(f'  {py} {MS}/draft_spec.py "{M}/03-union.json" --out "{M}/spec.json" --todo "{M}/spec.todo.md" --lang {a.lang}')
         print(f"  edit {M}/spec.json per spec.todo.md and candidates.md (meaning, not wording), then:")
         print(f'  {py} {MS}/reconcile.py "{M}/03-union.json" "{M}/spec.json" "{M}/04-reconciled.json" --lang {a.lang}')
-        print(f'  {py} {MS}/cleanup_location.py "{M}/04-reconciled.json" "{M}/05-cleaned.json" --match "^(Utbredelse|Forekomst|Occur|Distribution)" --removed "{M}/05-removed.json"')
+        print(f'  mark location characters in {M}/spec.json with "location": true, then:')
+        print(f'  {py} {MS}/cleanup_location.py "{M}/04-reconciled.json" "{M}/05-cleaned.json" --spec "{M}/spec.json" --removed "{M}/05-removed.json"')
         print(f'  {py} {MS}/choose_hierarchy.py "{M}/species.csv"')
         print(f'  {py} {MS}/build_hierarchy.py "{M}/05-cleaned.json" "{M}/07-hierarchy.json" --root {a.taxon} --rank <rank> --cache "{M}/species.csv.taxonomy-cache.json"')
         return 0

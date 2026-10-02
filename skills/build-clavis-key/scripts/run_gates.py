@@ -5,7 +5,7 @@ One command, one table, one exit code.
 Usage:
   run_gates.py KEY.json --csv species.csv --sources work --out leveranse \
       [--spec merge/spec.json --alias merge/alias.json --removed merge/removed.json --rename merge/coarsen/step-01.json ...]
-      [--source-keys merge/src/*.json] [--location "^(Utbredelse|Forekomst|Occur|Distribution)"]
+      [--source-keys merge/src/*.json] [--location REGEX]   (location characters normally come from spec.json: "location": true)
       [--run-start work/run-start.txt --match <sources folder name>]
 
 Gates:
@@ -27,7 +27,7 @@ ap.add_argument("key"); ap.add_argument("--csv", required=True); ap.add_argument
 ap.add_argument("--out", required=True)
 ap.add_argument("--spec"); ap.add_argument("--alias"); ap.add_argument("--removed"); ap.add_argument("--rename", action="append", default=[])
 ap.add_argument("--source-keys", nargs="*", default=[])
-ap.add_argument("--location", default=r"^(Utbredelse|Forekomst|Occur|Distribution|Verbreitung|Voorkomen)")
+ap.add_argument("--location", default=None, help="regex override; by default location characters are those marked in --spec")
 ap.add_argument("--run-start"); ap.add_argument("--match")
 a = ap.parse_args()
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -82,7 +82,14 @@ import importlib.util
 spec_ = importlib.util.spec_from_file_location("redundancy", os.path.join(REPO, "skills/merge-clavis-keys/scripts/redundancy.py"))
 R = importlib.util.module_from_spec(spec_); spec_.loader.exec_module(R)
 dd, lv, E, taxa = R.load(a.key); sep, *_ = R.analyse(dd, lv, E, {})
-loc = {c["id"] for c in dd["characters"] if re.search(a.location, T(c), re.I)}
+if a.location:
+    loc = {c["id"] for c in dd["characters"] if re.search(a.location, T(c), re.I)}
+elif a.spec:
+    _spec = json.load(open(a.spec, encoding="utf-8"))
+    _lt = {t for t, v in _spec.items() if v.get("location")}
+    loc = {c["id"] for c in dd["characters"] if T(c) in _lt}
+else:
+    loc = set()
 only_geo = [(taxa[x]["scientificName"], taxa[y]["scientificName"]) for (x, y), routes in sep.items() if routes and routes <= loc]
 G[6] = (not only_geo, f"pairs separated only by location: {len(only_geo)}" + (": " + "; ".join(f"{x} / {y}" for x, y in only_geo) if only_geo else "") + f"; location characters: {len(loc)}")
 

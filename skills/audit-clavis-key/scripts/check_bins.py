@@ -17,20 +17,22 @@ d = json.load(open(sys.argv[1], encoding="utf-8"))
 L = lambda s: next(iter(s["title"].values()))
 NUM = r"\d+(?:[.,]\d+)?"
 def bounds(l):
-    if re.match(rf"^(under|opptil|<)\s*{NUM}", l, re.I):
-        return (0.0, float(re.search(NUM, l).group().replace(",", ".")))
-    m = re.search(rf"({NUM})\s*[\u2013\u2012\u2014-]\s*({NUM})", l)  # X-Y range
+    """Bin bounds from a label that starts with a number or a comparison symbol.
+    Word-only labels ("small", "under 5") are not bins and are skipped: no words
+    of any language are interpreted here."""
+    s = l.strip()
+    m = re.match(rf"^[<≤]\s*({NUM})", s)
+    if m: return (0.0, float(m.group(1).replace(",", ".")))
+    m = re.match(rf"^({NUM})\s*[\u2013\u2012\u2014-]\s*({NUM})", s)
     if m: return (float(m.group(1).replace(",", ".")), float(m.group(2).replace(",", ".")))
-    if re.match(rf"^(over|>)\s*{NUM}", l, re.I):
-        return (float(re.search(NUM, l).group().replace(",", ".")), float("inf"))
-    if re.fullmatch(rf"{NUM}( .*)?", l) and re.fullmatch(r"\d+", re.search(NUM, l).group()):
+    m = re.match(rf"^[>≥]\s*({NUM})", s)
+    if m: return (float(m.group(1).replace(",", ".")), float("inf"))
+    if re.fullmatch(rf"{NUM}( .*)?", s) and re.fullmatch(r"\d+", re.search(NUM, s).group()):
         return "int"  # exact count ("3", "4 par"): atomic state, not a bin
-    return None  # descriptive label; character skipped
-# Any unit of measure marks the quantity as continuous, where "under X / over X"
-# is the required convention. Without a unit, integer bins are a discrete COUNT
-# and the boundary value must belong to a bin.
-UNIT = re.compile(r"(mm|cm|\bm\b|km|mg|\bg\b|kg|µm|%|sek|min|time[rn]?|døgn|"
-                  r"dag(er)?|uke[rn]?|måned(er)?|år|\bs\b|gram|meter)", re.I)
+    return None
+# A continuous measurement carries a unit token (letters or %) after its numbers;
+# a bare integer scale is a discrete count where the boundary value must belong to a bin.
+UNIT = re.compile(r"\d\s*([^\W\d_]{1,8}|%)")
 bad = 0
 # Numerical characters: unit, min <= max, each taxon range inside the character
 # range. Overlap between taxa is normal (that is the data); a gap is not a defect.

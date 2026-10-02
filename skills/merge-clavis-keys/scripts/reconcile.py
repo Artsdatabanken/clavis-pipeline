@@ -10,6 +10,7 @@ different things in different source characters):
 {
   "Canonical title": {
     "type": "exclusive" | "non-exclusive" | "numerical",
+    "location": false,                             # true for occurrence/region characters (cleanup_location.py, gate 6)
     "unit": "mm",                                  # numerical only
     "states": ["label a", "label b", ...],         # canonical order; categorical only
     "members": {
@@ -56,7 +57,7 @@ ap.add_argument("--lang", default=None)
 a = ap.parse_args()
 d = json.load(open(a.union, encoding="utf-8"))
 spec = json.load(open(a.spec, encoding="utf-8"))
-lang = a.lang or (d.get("language") or ["nb"])[0]
+lang = a.lang or (d.get("language") or ["und"])[0]
 
 T = lambda o: next(iter((o.get("title") or {}).values()), "")
 char = {c["id"]: c for c in d["characters"]}

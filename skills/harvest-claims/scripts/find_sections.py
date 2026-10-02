@@ -142,7 +142,7 @@ def main() -> int:
     def heading_pages(t: str) -> list[int]:
         """Pages in the section with a heading-like line for the taxon: a short
         line, no sentence punctuation, with the Latin name (best) or a vernacular
-        name at the start (definite forms -en/-a/-et and all caps allowed). All
+        name at the start (inflected forms and all caps allowed). All
         such pages are returned: a book may treat a species in several places
         (overview, account, tracks, skull), and a species account may start on
         the overview's page."""
@@ -151,7 +151,7 @@ def main() -> int:
         if rest:
             latin.append(re.compile(re.escape(g[0]) + r"\.\s*" + re.escape(" ".join(rest)), re.I))
         vern = [n for n in extra.get(t, []) if not re.match(r"^[A-Z]\.\s", n)]
-        vern_rx = [re.compile(r"^" + re.escape(n) + r"(en|a|et|ene|er)?\b", re.I) for n in vern]
+        vern_rx = [re.compile(r"^" + re.escape(n) + r"[^\W\d_]{0,3}\b", re.I) for n in vern]   # inflected forms: up to three more letters, any language
         found = {}
         lo, hi = section
         for i in range(lo, hi + 1):

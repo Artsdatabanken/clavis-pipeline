@@ -13,7 +13,7 @@ inp, outp, planp = sys.argv[1:4]
 d = json.load(open(inp, encoding="utf-8"))
 plan = json.load(open(planp, encoding="utf-8"))
 T = lambda o: next(iter(o["title"].values()))
-lang = (d.get("language") or ["nb"])[0]
+lang = (d.get("language") or ["und"])[0]
 
 remap, before = {}, sum(len(c.get("states") or []) for c in d["characters"])
 skipped = []

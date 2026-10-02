@@ -4,7 +4,11 @@ pair that needs it (the pair would lose its last separator, or drop from >=3
 routes to fewer, without it); strip its statements from every other species;
 drop the character entirely when no pair needs it.
 
-Usage: cleanup_location.py IN.json OUT.json --match "^(Utbredelse|Forekomst|Occurs|Distribution)" --removed removed.json
+Usage: cleanup_location.py IN.json OUT.json --spec spec.json --removed removed.json [--match REGEX]
+
+Location characters are the canonical characters marked "location": true in
+spec.json (the merge agent marks them by meaning). --match is an explicit
+override for a key without a spec; there is no default word list.
 
 Writes removed.json entries in the roundtrip.py format:
   {"<title>": {"reason": "...", "species": "all" | [names stripped], "kept_for": [names]}}
@@ -14,7 +18,8 @@ import argparse, collections, importlib.util, itertools, json, os, re, sys
 
 ap = argparse.ArgumentParser()
 ap.add_argument("inp"); ap.add_argument("outp")
-ap.add_argument("--match", required=True, help="regex on character titles")
+ap.add_argument("--spec", help="spec.json with \"location\": true on location characters")
+ap.add_argument("--match", help="regex on character titles (explicit override)")
 ap.add_argument("--removed", required=True)
 a = ap.parse_args()
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -22,8 +27,15 @@ spec_ = importlib.util.spec_from_file_location("redundancy", os.path.join(HERE, 
 R = importlib.util.module_from_spec(spec_); spec_.loader.exec_module(R)
 T = lambda o: next(iter((o.get("title") or {}).values()), "")
 d = json.load(open(a.inp, encoding="utf-8"))
-rx = re.compile(a.match, re.I)
-loc = {c["id"]: T(c) for c in d["characters"] if rx.search(T(c))}
+if a.spec:
+    spec = json.load(open(a.spec, encoding="utf-8"))
+    loc_titles = {t for t, v in spec.items() if v.get("location")}
+    loc = {c["id"]: T(c) for c in d["characters"] if T(c) in loc_titles}
+elif a.match:
+    rx = re.compile(a.match, re.I)
+    loc = {c["id"]: T(c) for c in d["characters"] if rx.search(T(c))}
+else:
+    sys.exit("give --spec (location: true in spec.json) or --match")
 if not loc:
     json.dump({}, open(a.removed, "w"), ensure_ascii=False)
     json.dump(d, open(a.outp, "w", encoding="utf-8"), ensure_ascii=False, indent=1)

@@ -34,7 +34,7 @@ import unicodedata
 from collections import Counter, defaultdict
 from pathlib import Path
 
-STOP = {"i", "på", "av", "the", "of", "in", "and", "og", "eller", "or", "med", "with", "til", "to", "der", "die", "das", "van", "de", "hos", "a", "an", "en", "et"}
+STOP: set[str] = set()   # filled from the data: tokens in more than a third of all trait wordings carry no meaning
 
 
 def norm(s: str) -> str:
@@ -66,6 +66,10 @@ def main() -> int:
     listed = [r["scientificName"].strip() for r in csv.DictReader(a.taxa.open(encoding="utf-8-sig")) if r.get("scientificName", "").strip()]
     listed_n = {norm(t): t for t in listed}
 
+    all_toks = Counter()
+    for c in claims:
+        all_toks.update({w for w in norm(c["trait"]).split() if len(w) > 2})
+    STOP.update(w for w, n in all_toks.items() if n > len(claims) / 3)
     by_trait: dict[str, list[dict]] = defaultdict(list)
     for c in claims:
         if c.get("observable") is False or c.get("same_as"):

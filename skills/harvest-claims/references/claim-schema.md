@@ -11,16 +11,17 @@ Part of the `harvest-claims` skill. All files are JSON lines, UTF-8, one object 
 | `taxon` | harvester | Scientific name as the source writes it. Resolution to accepted names happens later. |
 | `trait` | harvester | What is observed, in the source language, short: `halelengde`, `bukfarge`, `antall tenner`. |
 | `value` | harvester | What the source says about it, as stated: `lengre enn kroppen`, `20–35 g`, `hvit`. One value per claim. |
-| `qualifier` | harvester, else `check_claims.py` from the quote | `always`, `usually`, `sometimes`, `rarely`, `range`, `comparative`, `unspecified`. |
+| `qualifier` | harvester | `always`, `usually`, `sometimes`, `rarely`, `range`, `comparative`. The harvester reads the source's wording and sets it; the checker only notes when it is missing. |
+| `values` | harvester | When the source lists alternatives for one trait ("brown or grey", "svart til gråbrun"): the list of values, one per alternative, with `value` holding the wording as written. The scorer matches each entry. |
 | `quote` | harvester | The verbatim passage or figure label the claim rests on. |
 | `page` | harvester | Printed page number, or plate/figure id. |
 | `kind` | harvester | `description`, `key`, `table`, `figure`. Default `description`. |
 | `observable` | harvester | `false` for traits that cannot be seen on a specimen or find. Default `true`. |
-| `value_num` | `check_claims.py` | `[min, max]` parsed from `value`; `null` on an open side (`over 24 mm` → `[24, null]`). |
-| `unit` | `check_claims.py` | Unit parsed from `value` (`mm`, `g`, `%`). |
-| `diagnostic` | harvester, else `check_claims.py` | `true` when the source presents the trait as what distinguishes the taxon (a key couplet, or wording like "skilles fra ... ved"). The digitizer scores the other taxa absent on that character. |
+| `value_num` | harvester (the checker fills it only for symbol forms like `3–6 g`, `< 30 mm`) | `[min, max]`; `null` on an open side (`over 24 mm` → `[24, null]`, `opptil 2,5 cm` → `[null, 2.5]`). The checker verifies each number occurs in `value` or `quote`. |
+| `unit` | harvester | Unit as written in the source (`mm`, `g`, `%`). |
+| `diagnostic` | harvester (claims of kind `key` default to true) | `true` when the source presents the trait as what distinguishes the taxon (a key couplet, "recognized by", "differs from X in"). The digitizer scores the other taxa absent on that character. |
 | `same_as` | harvester | Scientific name of a taxon this one cannot be told from, per the source ("ingen ytre forskjeller fra ..."). The digitizer copies that taxon's values where this one has none. `trait` and `value` describe the statement itself. |
-| `note` | `check_claims.py` | Something the harvester must fix, e.g. a quote with two frequency words, or a look-alike quote without `same_as`. |
+| `note` | `check_claims.py` | Something the harvester must fix: a missing qualifier, a number in `value_num` that is not in the quote, a missing unit. |
 
 Examples:
 
@@ -64,5 +65,4 @@ One line per claim that deliberately did not become a statement.
 
 ## Related tables
 
-- `references/qualifiers.json`: per-language words that set `qualifier`.
 - `references/frequency-table.json`: the one mapping from qualifier to statement frequency, used by `score_claims.py`. Frequencies are weak priors; any value above 0 keeps the taxon reachable.

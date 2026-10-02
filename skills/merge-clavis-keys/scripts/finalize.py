@@ -57,22 +57,22 @@ deadids = {c["id"] for c in dead}
 d["characters"] = [c for c in d["characters"] if c["id"] not in deadids]
 d["statements"] = [s for s in d["statements"] if s["character"] not in deadids]
 
-MONTHS = ["januar","februar","mars","april","mai","juni","juli","august",
-          "september","oktober","november","desember"]
 NUM = r"\d+(?:[.,]\d+)?"
 def lower(l):
-    if re.match(rf"^(under|opptil|<)\s*{NUM}", l, re.I): return -1e18
-    m = re.search(rf"({NUM})\s*[–—-]\s*({NUM})", l)
+    """Sort key for a state label that starts with a number or a comparison symbol;
+    None for word labels (left in authored order). No words of any language."""
+    s = l.strip()
+    m = re.match(rf"^[<≤]\s*({NUM})", s)
+    if m: return -1e18
+    m = re.match(rf"^({NUM})\s*[–—-]\s*({NUM})", s)
     if m: return float(m.group(1).replace(",", "."))
-    if re.match(rf"^(over|>)\s*{NUM}", l, re.I):
-        return float(re.search(NUM, l).group().replace(",", "."))
+    m = re.match(rf"^[>≥]?\s*({NUM})", s)
+    if m: return float(m.group(1).replace(",", "."))
     return None
 for c in d["characters"]:
     if not c.get("states"): continue   # numerical characters have no states
     labs = [T(s) for s in c["states"]]
-    if all(l.lower() in MONTHS for l in labs):
-        c["states"].sort(key=lambda s: MONTHS.index(T(s).lower()))
-    elif all(lower(l) is not None for l in labs):
+    if all(lower(l) is not None for l in labs):
         c["states"].sort(key=lambda s: lower(T(s)))
 
 if a.order:

@@ -14,7 +14,7 @@ from _adapters import taxonomy
 ap = argparse.ArgumentParser()
 ap.add_argument("key")
 ap.add_argument("cache", nargs="?")
-ap.add_argument("--lang", default="nb", help="ISO 639-1 language of the names to fetch")
+ap.add_argument("--lang", required=True, help="ISO 639-1 language of the names to fetch")
 ap.add_argument("--taxonomy", default=None, help="taxonomy adapter name (default: nortaxa)")
 a = ap.parse_args()
 tax = taxonomy(a.taxonomy)

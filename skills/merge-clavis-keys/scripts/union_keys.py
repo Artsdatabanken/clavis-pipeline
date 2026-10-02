@@ -54,7 +54,7 @@ report = []
 for path in a.keys:
     src = os.path.basename(path).split(".")[0]
     d = json.load(open(path, encoding="utf-8"))
-    lang = (d.get("language") or ["nb"])[0]
+    lang = (d.get("language") or ["und"])[0]
     T = lambda o: (o.get("title") or {}).get(lang) or next(iter((o.get("title") or {}).values()), "")
 
     taxa, par = {}, {}

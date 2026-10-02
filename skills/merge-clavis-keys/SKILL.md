@@ -66,7 +66,7 @@ Measurements: every source's measurement character is numerical (the audit guara
 
 ### 6. Cleanup (measured)
 
-- `scripts/cleanup_location.py 04-reconciled.json 05-cleaned.json --match "^(Utbredelse|Forekomst|Occur|Distribution)" --removed 05-removed.json`: a location character stays only for the species whose pairs need it (last route, or a drop below 3 routes); stripped elsewhere; dropped when no pair needs it. All logged in `removed.json` in the round-trip's format.
+- Mark every occurrence or region character in `spec.json` with `"location": true` (by meaning; there is no word list), then `scripts/cleanup_location.py 04-reconciled.json 05-cleaned.json --spec spec.json --removed 05-removed.json`: a location character stays only for the species whose pairs need it (last route, or a drop below 3 routes); stripped elsewhere; dropped when no pair needs it. All logged in `removed.json` in the round-trip's format.
 - Species statistics no user can answer on an encounter (abundance, gestation, litters per year): the digitizers skipped them; if any survived, remove and list them in `removed.json` with a reason.
 
 ### 7. Hierarchy

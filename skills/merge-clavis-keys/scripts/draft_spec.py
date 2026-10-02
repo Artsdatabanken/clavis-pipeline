@@ -76,7 +76,7 @@ def main() -> int:
         canon = Counter(m["title"] for m in members).most_common(1)[0][0]
         types = Counter(m["c"].get("type", "exclusive") for m in members)
         typ = types.most_common(1)[0][0]
-        entry = {"type": typ, "members": defaultdict(dict)}
+        entry = {"type": typ, "location": False, "members": defaultdict(dict)}   # set location: true by meaning (occurrence, region, country)
         if typ == "numerical":
             entry["unit"] = Counter(U(m["c"]) for m in members).most_common(1)[0][0]
             for m in members:
