@@ -24,7 +24,7 @@ One criterion, applied to every state: **can one person, with one specimen (or o
    - **BUNDLE**: split into one state per value with `refine-clavis-key/scripts/apply_state_splits.py`; the taxon gets a statement on each.
    - **RELATIVE**: keep only when nothing else separates the taxa it separates (check `redundancy.py`); otherwise drop and log.
    - **NUMERIC-AS-STATES**: convert to a numerical character: each bin becomes `[lo, hi]`, open ends closed at the character's extremes; one statement per taxon as the union of its bins.
-3. Every relabel or merge is written as a rename file (`{"Character": {"old": "new"}}`, `__characters__` for titles) so `roundtrip.py` can chain it; every removal goes to `removed.json`.
+3. Every relabel or merge is written as a rename file in `<merge folder>/determinability/` (`{"Character": {"old": "new"}}`, `__characters__` for titles) so `roundtrip.py` can chain it; every removal goes to `removed.json`.
 4. Run `tools/verify.py` and `merge-clavis-keys/scripts/redundancy.py` on the result and report: flags before and after, pairs separated before and after (must not drop), what was merged, rewritten, converted, removed.
 
 ## Output

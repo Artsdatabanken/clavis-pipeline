@@ -33,7 +33,9 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-CAPTION = re.compile(r"\b(fig\.?|figur|figure|pl\.?|plansje|plate|tab\.?|tabell|table|foto|photo|tegn\.?|tegning|abb\.?|afb\.?|bild)\s*\d*", re.I)
+# a caption reference: the word AND a number ("Fig. 3", "Plansje 12", "Tab. 2"); bare words
+# like "tegn" or "pl" are ordinary text
+CAPTION = re.compile(r"\b(fig\.?|figur|figure|pl\.?|plansje|plate|tab\.?|tabell|table|foto|photo|tegning|abb\.?|afb\.?|bild)\s*\.?\s*\d+", re.I)
 
 
 def parse_range(s: str) -> tuple[int, int]:

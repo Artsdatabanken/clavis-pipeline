@@ -109,6 +109,9 @@ def main() -> int:
         entry["members"] = dict(entry["members"])
         if len(members) == 1:
             todo.append(("lonely", canon, members[0]["src"], members[0]["title"], ""))
+        if canon in spec:                       # a measurement and a categorical character share a title
+            canon = canon + (" (tall)" if typ == "numerical" else " (kategori)")
+            todo.append(("lonely", canon, members[0]["src"], members[0]["title"], "same title as another character of a different type; decide whether they are one observable"))
         spec[canon] = entry
 
     a.out.write_text(json.dumps(spec, ensure_ascii=False, indent=1), encoding="utf-8")

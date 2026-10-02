@@ -135,7 +135,8 @@ def main() -> int:
                 section = [c[0], c[-1]]
                 break
     back_matter = []
-    HEAD_MAX = 45          # a species heading is a short line
+    HEAD_MAX = 45          # a species heading is a short line (or a short column segment)
+    COLGAP = re.compile(r"\s{3,}")   # two-column layouts: test each column segment as its own line
     SENTENCE = re.compile(r"[.,;:]\s*\S")   # sentence punctuation followed by text: body, not heading
 
     def heading_pages(t: str) -> list[int]:
@@ -156,14 +157,15 @@ def main() -> int:
         for i in range(lo, hi + 1):
             prev_lines = {l.strip() for l in pages[i - 2].splitlines()} if i >= 2 else set()
             for line in pages[i - 1].splitlines():
-                s = line.strip()
-                if not (2 < len(s) <= HEAD_MAX) or SENTENCE.search(s):
-                    continue
-                if s in prev_lines:
-                    continue   # running header repeated from the previous page, not a heading
-                score = 3 if any(rx.match(s) for rx in latin) else 2 if any(rx.search(s) for rx in latin) else 1 if any(rx.match(s) for rx in vern_rx) else 0
-                if score:
-                    found[i] = max(found.get(i, 0), score)
+                for s in COLGAP.split(line.strip()):
+                    s = s.strip()
+                    if not (2 < len(s) <= HEAD_MAX) or SENTENCE.search(s):
+                        continue
+                    if s in prev_lines:
+                        continue   # running header repeated from the previous page, not a heading
+                    score = 3 if any(rx.match(s) for rx in latin) else 2 if any(rx.search(s) for rx in latin) else 1 if any(rx.match(s) for rx in vern_rx) else 0
+                    if score:
+                        found[i] = max(found.get(i, 0), score)
         return sorted(found)
 
     if section:
@@ -172,16 +174,33 @@ def main() -> int:
             if r["pages"] and not inside:
                 back_matter.append(t)
             hp = heading_pages(t) if r["pages"] else []
-            if hp:
+            # pages where the taxon is mentioned three or more times are its account
+            # even without a detectable heading (two-column plates, OCR noise)
+            dense = [p for p in inside if sum(len(rx.findall(pages[p - 1])) for rx in patterns(t)) >= 3]
+            if hp or dense:
                 r["heading_pages"] = hp
+                r["dense_pages"] = dense
                 ps = set()
-                for p in hp:
-                    ps.update((p, p + 1))        # a heading page and the one after it
+                for p in hp + dense:
+                    ps.update((p, p + 1))        # the page and the one after it
                 r["best"] = sorted(p for p in ps if section[0] <= p <= section[1])[:12]
             elif inside:
                 # no heading found: the page with the most mentions inside the section
                 dens = max(inside, key=lambda p: (sum(len(rx.findall(pages[p - 1])) for rx in patterns(t)), -p))
                 r["best"] = [dens, dens + 1]
+
+    # --pages-override: {"Taxon": [pdf pages]} replaces the detected pages
+    override = json.loads(a.pages_override.read_text(encoding="utf-8")) if getattr(a, "pages_override", None) and a.pages_override.exists() else {}
+    for t, ps in override.items():
+        if t in result:
+            pages_ = set()
+            for p in ps:
+                if isinstance(p, str) and "-" in p:
+                    x, y = p.split("-"); pages_.update(range(int(x), int(y) + 1))
+                else:
+                    pages_.add(int(p))
+            result[t]["best"] = sorted(pages_)
+            result[t]["override"] = True
 
     a.out.mkdir(parents=True, exist_ok=True)
     meta = {"source_text": str(a.text), "pdf_pages": len(pages), "printed_page_offset": offset,

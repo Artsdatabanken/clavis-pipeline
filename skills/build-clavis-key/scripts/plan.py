@@ -113,7 +113,7 @@ def main() -> int:
 
     M = W / "merge"; M.mkdir(exist_ok=True)
     MS = REPO / "skills/merge-clavis-keys/scripts"
-    audited = sorted(W.glob("*/*.audited.json")) + sorted(W.glob("*/*.refined.audited.json"))
+    audited = sorted(set(W.glob("*/*.audited.json")))
     if not (M / "07-hierarchy.json").exists():
         print("Phase 3: merge (run in order; decide spec.json by meaning where the todo file says):")
         print(f'  cp "{a.taxa}" "{M}/species.csv"')
@@ -141,7 +141,8 @@ def main() -> int:
         print(f"  add metadata (title, geography, licence, lastModified) -> {key}; merge removed files into {M}/removed.json")
         print(f'  {py} {MS}/vernacular.py "{key}" --lang {a.lang}')
         renames = sorted(glob.glob(str(M / "determinability" / "*.json"))) + sorted(glob.glob(str(M / "coarsen" / "step-[0-9][0-9].json")))
-        print(f'  {py} {REPO}/skills/build-clavis-key/scripts/run_gates.py "{key}" --csv "{M}/species.csv" --sources "{W}" --out "{D}" --spec "{M}/spec.json" --removed "{M}/removed.json" ' + " ".join(f'--rename "{r}"' for r in renames) + ' --source-keys ' + " ".join(f'"{k}"' for k in audited) + f' --run-start "{W}/run-start.txt" --match {S.name}')
+        alias = f' --alias "{M}/alias.json"' if (M / "alias.json").exists() else ""
+        print(f'  {py} {REPO}/skills/build-clavis-key/scripts/run_gates.py "{key}" --csv "{M}/species.csv" --sources "{W}" --out "{D}" --spec "{M}/spec.json"{alias} --removed "{M}/removed.json" ' + " ".join(f'--rename "{r}"' for r in renames) + ' --source-keys ' + " ".join(f'"{k}"' for k in audited) + f' --run-start "{W}/run-start.txt" --match {S.name}')
         return 0
     print("Done: leveranse/gates.md exists. Write the final report from it.")
     return 0
