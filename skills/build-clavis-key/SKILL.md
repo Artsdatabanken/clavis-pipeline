@@ -18,7 +18,7 @@ Orchestrates: species list → prepare each source → harvest claims → one ke
 Progress checklist, copy it and tick as you go:
 
 ```
-- [ ] run-start.txt
+- [ ] plan.py (writes run-start.txt)
 - [ ] 0 species list
 - [ ] 0b prepare each source (text, names, sections, figures)
 - [ ] 0c one harvester per source -> claims.jsonl
@@ -29,9 +29,13 @@ Progress checklist, copy it and tick as you go:
 - [ ] 4 run_gates.py until all required gates pass; deliver
 ```
 
-## First thing: note the start time
+## The planner does the bookkeeping
 
-Write the local date and time into `work/run-start.txt`. The token report at the end needs it.
+```
+python3 scripts/plan.py --sources <sources folder> --taxa species.csv --lang <lang> --taxon <Taxon> --model <run model>
+```
+
+Run it at the start and after every phase. It looks at what exists under `work/`, writes `work/run-start.txt` the first time, prints the next phase's commands with every path filled in, and for agent phases writes one brief per agent to `work/briefs/` (invariant lines first, specifics last). Spawn exactly the agents it names with exactly those briefs; run exactly the commands it prints. The phases below say what each step is for; the planner says how.
 
 ## Ask at the start (one round, then run)
 

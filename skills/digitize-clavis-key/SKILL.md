@@ -31,7 +31,7 @@ Progress checklist, copy it and tick as you go:
 
 ```
 - [ ] 1 trait table from the claims; every trait -> character or skip reason
-- [ ] 2 design.json: characters, states with values, numerical units, absent states, same_as_excludes
+- [ ] 2 draft_design.py -> edit -> design.json (merges, state names, absent states, non-exclusive, same_as_excludes)
 - [ ] 3 score_claims.py; residue down to skipped claims only
 - [ ] 4 generator -> key + provenance.jsonl + skipped.jsonl; verify.py and claims_vs_key.py at zero
 - [ ] 5 decisions.md and coverage note; hand off to audit-clavis-key
@@ -50,7 +50,13 @@ Every claim ends up in exactly one of those two places. The claims audit at the 
 
 ## Step 2: Design the characters
 
-The design is a JSON file (`design.json`, format in `scripts/score_claims.py`), not an assignment map. For each character:
+Start from a draft, do not write from scratch:
+
+```
+python3 scripts/draft_design.py work/<source>/claims.jsonl --taxa species.csv --lang <lang> --out design.draft.json --review design.review.md
+```
+
+The draft has one character per trait wording with its values as states, numerical where the claims carry numbers, and `design.review.md` lists the wordings that are probably one observable and the values per taxon. Your edits, and only these: merge characters that are one observable, merge states a user cannot tell apart, name states, set `absent` on diagnostic characters, mark non-exclusive characters, delete skipped traits (reasons to `skipped.jsonl`), save as `design.json`. Format in `scripts/score_claims.py`. For each character:
 
 - **Title**: what the user observes, in the source language. No source names, step numbers or bookkeeping in titles. Duplicate titles are legal (a trait asked twice with different state sets); never disambiguate by position in the key.
 - **`traits`**: the normalized claim traits that feed it. Several wordings for one observable go on one character.

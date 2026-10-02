@@ -45,7 +45,14 @@ A source whose characters are verbatim couplets (multi-clause states bundling se
 
 ### 4. Concordance and state maps: spec.json
 
-`scripts/concordance_candidates.py 03-union.json --out candidates.md [--glossary glossary.json]` lists pairs of source characters that probably describe the same observable (title similarity, glossary, shared labels, overlapping ranges, data agreement as evidence). Decide by **meaning** (what does the user look at?) and write `spec.json`, format in `scripts/reconcile.py`: per canonical character its type, unit (numerical), ordered states (categorical), and for every source character that feeds it a map from each source label to one or more canonical labels, `[]` for "says nothing". Maps are per source character, because "ja" means different things in different characters. A source character may feed several canonical axes.
+Two scripts, then your judgment on what they leave open:
+
+```
+python3 scripts/concordance_candidates.py 03-union.json --out candidates.md [--glossary glossary.json]
+python3 scripts/draft_spec.py 03-union.json --out spec.json --todo spec.todo.md --lang nb
+```
+
+The first lists pairs of source characters that probably describe the same observable (title similarity, glossary, shared labels, overlapping ranges, data agreement as evidence). The second writes `spec.json` with every source character already placed: identical titles grouped, identical labels mapped, numerical members marked, and `spec.todo.md` naming what you must decide: characters still alone (merge them under the right canonical one by **meaning**, what the user looks at, using `candidates.md`) and labels mapped to null. `reconcile.py` refuses a spec with nulls. Format in `scripts/reconcile.py`: per canonical character its type, unit (numerical), ordered states (categorical), and for every source character that feeds it a map from each source label to one or more canonical labels, `[]` for "says nothing". Maps are per source character, because "ja" means different things in different characters. A source character may feed several canonical axes.
 
 Measurements: every source's measurement character is numerical (the audit guaranteed it), so the member map is `{}` and `reconcile.py` unions the ranges. A source in another unit gets `{"scale": f}` (cm into mm: 10). A source whose numbers are key thresholds ("shorter than 30 cm", the open end closed at a chosen limit) gets `{"bound": true}`: its ranges that touch the source character's min or max give way to the measured ranges they overlap and stand only where nothing was measured or they disagree; the round-trip counts them as narrowed. A source that still has bins must be converted to ranges in its own key first (each bin becomes `[lo, hi]` with open ends closed at the character's min/max).
 

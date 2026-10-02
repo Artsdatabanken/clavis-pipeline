@@ -37,6 +37,13 @@ All required gates passed. 86 characters (24 numerical), 873 statements, 259 KB 
 - 108 harvester agents (one per species per book): now one per source, species by species.
 - Thirteen script fixes found on real data (units, exact matching, open ranges, numerical support in merge scripts, page override, cost gate), committed.
 
+## Added 2 October, for smaller models
+
+- `draft_design.py`: design.json drafted from the claims; the digitizer edits (merges, names, absent states) instead of writing.
+- `draft_spec.py`: spec.json drafted from the union with identical titles and labels already placed; the merge agent decides only the characters left alone and the labels left null.
+- `plan.py`: the orchestrator's bookkeeping: detects the phase from the files, prints the commands, writes every agent brief with paths filled in.
+- Skills: checklists in the first lines, third-person descriptions, all under 110 lines (the limit is 500; a partial read of the first 100 lines gets the whole procedure).
+
 ## Open
 
 1. **Run 4**: same sources and list, to measure the effect of the two scoring rules and per-source harvesting on separability and cost. Compare with run 2 and run 3.

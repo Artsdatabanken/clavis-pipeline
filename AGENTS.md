@@ -6,7 +6,7 @@ You are in the Clavis pipeline repository. Its job: turn identification material
 
 The user names a taxon and points you at sources: local files, folders, or URLs. Then:
 
-1. Read `skills/build-clavis-key/SKILL.md`. It is the orchestrator: species list, prepare each source once, harvest claims (one agent per source, taxon by taxon), digitize (one agent per source), audit (one fresh agent per draft), merge, determinability pass (one fresh agent), then the gates.
+1. Read `skills/build-clavis-key/SKILL.md`. Its planner script (`scripts/plan.py`) tells you the next phase with every command and agent brief filled in; run it after each phase. The skill is the orchestrator: species list, prepare each source once, harvest claims (one agent per source, taxon by taxon), digitize (one agent per source), audit (one fresh agent per draft), merge, determinability pass (one fresh agent), then the gates.
 2. Each step has its own `skills/<step>/SKILL.md`. Read the one for the step you are on, follow it, run the scripts it names from `skills/<step>/scripts/`. Do not reinvent what a script already does; if a script is wrong, fix the script and say so in the report.
 3. For a single step ("audit this key", "translate this key to English", "did we miss anything in the book"), go straight to that skill.
 4. Work in a `work/` folder next to the sources, deliver in `leveranse/` next to it. Never write into the source folder, never overwrite the user's files; new versions get new filenames.
