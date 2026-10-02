@@ -23,7 +23,7 @@ The pipeline was rewritten after the first full run from this folder (rodent key
 - `reconcile.py` rewritten on `spec.json` (per-source maps, non-exclusive, numerical).
 - `verify.py` reads the character type; non-exclusive characters no longer warn.
 - Scratch directory per agent required in every brief; `md_to_pdf.py` optional everywhere.
-- Single-species characters: kept by the digitizer when they are clear field marks; the merge's zero-power removal still applies, logged. Restore from `removed-characters.md` if a ranking interface wants them.
+- Characters only one species is described with: valid when the other species are known to lack the trait (then it is one character with several states); useless and removed by the merge only when the other species are unknown. Written into digitize and merge. Decided 2026-10-02.
 
 **Token cost (items 34–37)**
 - Per-taxon files and figure crops instead of sections and pages; claims instead of books; briefs with an invariant prefix; `tools/token_report.py` as gate 8. Model pinned (`model: opus` in agents, forced in `.claude/settings.json`).

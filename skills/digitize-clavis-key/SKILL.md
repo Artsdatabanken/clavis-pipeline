@@ -32,7 +32,9 @@ This skill is domain-agnostic and language-agnostic, and produces a **draft**. `
 Load the claims and list the distinct normalized traits with their values per taxon (a scratch script in `work/<source>/scratch/`; never in the sources folder). This table is your material. For each trait decide one of:
 
 - **Character** (two or more taxa, different values): categorical or numerical.
-- **Skip** with a reason (`skipped.jsonl`): `not-observable` (the harvester marked it, or you judge it: age, litter size, diet), `single-taxon` (only one taxon has the trait; keep it anyway when the trait is a clear field mark such as a beaver's tail, the determinability pass and the merge can still remove it), `no-variation`, `duplicate`, `out-of-scope`.
+- **Skip** with a reason (`skipped.jsonl`): `not-observable` (the harvester marked it, or you judge it: age, litter size, diet), `no-variation`, `duplicate`, `out-of-scope`.
+
+A trait only one taxon is described with is a valid character when the other taxa are known not to have it: a flat tail separates the beaver from every species the source describes with a round tail. So first look for the same trait under other wordings for the other taxa (round tail, long thin tail) and make it one character with several states. If the source says nothing about the trait for the other taxa, keep the character anyway and score only the taxon that has it: the merge removes a character no answer can ever rule a species out with, and lists it. Never invent a "no" for taxa the source is silent about.
 
 Every claim ends up in exactly one of those two places. The claims audit at the end proves it.
 

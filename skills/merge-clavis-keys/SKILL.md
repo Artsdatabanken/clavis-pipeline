@@ -76,7 +76,7 @@ Hand `07-hierarchy.json` to `determinability-pass` (a fresh agent inside `build-
 
 ### 10. Finalize
 
-`scripts/finalize.py 08-coarsened.json KEY.json --removed 08-zero-power.json --order order.json`: drops characters with zero separating power (logged), orders states (numeric ascending, months), orders characters by field-answerability tiers you write in `order.json`. Then metadata (title, geography = the list's region, licence as a full URL, `lastModified`).
+`scripts/finalize.py 08-coarsened.json KEY.json --removed 08-zero-power.json --order order.json`: drops characters no answer can ever rule a species out with (one species scored, every other species unknown; a trait that other species are scored as lacking stays, because it separates), lists them in the removed file, orders states (numeric ascending, months), orders characters by field-answerability tiers you write in `order.json`. Then metadata (title, geography = the list's region, licence as a full URL, `lastModified`).
 
 ## Verification
 

@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """Final presentation pass on a merged key:
-  1. drop characters with ZERO separating power (they can never exclude a
-     taxon, so they are pure cost to the user) -- names written to removed.json
+  1. drop characters no answer can ever rule a taxon out with: only one taxon
+     is scored and every other taxon is unknown. A trait that other taxa are
+     scored as lacking (round tail vs flat tail) separates and stays. Names
+     written to removed.json. Rule from Wouter, 2026-10-02: a trait one species
+     has and others don't is valid; it is useless only when the others are
+     unknown.
   2. order each character's states meaningfully: numeric bins ascending by
      lower bound, months chronologically, everything else left as authored
      (alphabetical order on a measurement character is unreadable)
