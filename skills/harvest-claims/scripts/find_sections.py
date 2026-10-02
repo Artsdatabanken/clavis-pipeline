@@ -155,14 +155,15 @@ def main() -> int:
         found = {}
         lo, hi = section
         for i in range(lo, hi + 1):
-            prev_lines = {l.strip() for l in pages[i - 2].splitlines()} if i >= 2 else set()
+            strip_digits = lambda x: re.sub(r"\d+", "", x).strip()
+            prev_lines = {strip_digits(l) for l in pages[i - 2].splitlines()} if i >= 2 else set()
             for line in pages[i - 1].splitlines():
                 for s in COLGAP.split(line.strip()):
                     s = s.strip()
                     if not (2 < len(s) <= HEAD_MAX) or SENTENCE.search(s):
                         continue
-                    if s in prev_lines:
-                        continue   # running header repeated from the previous page, not a heading
+                    if strip_digits(s) in prev_lines:
+                        continue   # running header repeated from the previous page (page numbers ignored), not a heading
                     score = 3 if any(rx.match(s) for rx in latin) else 2 if any(rx.search(s) for rx in latin) else 1 if any(rx.match(s) for rx in vern_rx) else 0
                     if score:
                         found[i] = max(found.get(i, 0), score)
@@ -183,7 +184,7 @@ def main() -> int:
                 ps = set()
                 for p in hp + dense:
                     ps.update((p, p + 1))        # the page and the one after it
-                r["best"] = sorted(p for p in ps if section[0] <= p <= section[1])[:12]
+                r["best"] = sorted(p for p in ps if section[0] <= p <= section[1])
             elif inside:
                 # no heading found: the page with the most mentions inside the section
                 dens = max(inside, key=lambda p: (sum(len(rx.findall(pages[p - 1])) for rx in patterns(t)), -p))

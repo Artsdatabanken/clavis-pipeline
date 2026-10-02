@@ -43,9 +43,9 @@ def norm(s: str) -> str:
 
 
 def trait_key(s: str) -> str:
-    """Grouping key for a trait wording: parentheticals and a leading 'figur:'/'figure:' dropped."""
+    """Grouping key for a trait wording: parentheticals and a short leading 'label:' dropped."""
     s = re.sub(r"\(.*?\)", " ", str(s))
-    s = re.sub(r"^\s*(figur|figure|fig)\s*:\s*", "", s, flags=re.I)
+    s = re.sub(r"^\s*\S{1,12}:\s*", "", s)   # a short "label:" prefix ("figur: snuteform"), whatever the word
     return norm(s)
 
 

@@ -6,9 +6,8 @@
      written to removed.json. Rule from Wouter, 2026-10-02: a trait one species
      has and others don't is valid; it is useless only when the others are
      unknown.
-  2. order each character's states meaningfully: numeric bins ascending by
-     lower bound, months chronologically, everything else left as authored
-     (alphabetical order on a measurement character is unreadable)
+  2. order each character's states: labels that start with a number or a
+     comparison symbol ascending by lower bound, everything else left as authored
   3. order characters by field-answerability using an explicit tier list
 
 Usage: finalize.py IN.json OUT.json --removed removed.json [--order order.json]

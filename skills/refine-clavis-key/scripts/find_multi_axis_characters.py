@@ -9,7 +9,6 @@ Language-neutral signals only (no word lists):
     presence; "green" beside them is another)
   - a label whose first word is shared with another label's first word while
     a third label shares no word with either
-  - a mix of one-word labels and multi-word labels in the same character
 Quantitative characters are skipped. The model judges every flagged character
 and writes the split decisions for apply_character_split.py.
 
@@ -53,8 +52,6 @@ def flag_character(labels):
         others = [l for l, w in zip(labels, ws) if w and not any(set(w) & set(words(x)) for g in shared for x in g if x != l)]
         if others:
             why.append(f"states sharing a first word ({', '.join(shared[0][:3])}) beside unrelated states ({', '.join(others[:3])})")
-    if any(len(w) == 1 for w in ws) and any(len(w) >= 2 for w in ws) and len(labels) >= 3:
-        why.append("one-word and multi-word states mixed")
     return why
 
 

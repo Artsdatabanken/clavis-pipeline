@@ -6,8 +6,8 @@ from the key's structure, never from word lists.
 Usage: flag_undeterminable.py KEY.json --out flags.md [--claims claims.jsonl --provenance provenance.jsonl] [--max-states 6]
 
 Checks:
-  COMPARATIVE   a state whose supporting claims are marked `comparative` by
-                the harvester (compares to something not in front of the user)
+  COMPARATIVE   a state all of whose supporting claims are marked `comparative`
+                by the harvester (compares to something not in front of the user)
   BUNDLE        a state whose supporting claims list several `values` (the
                 source said "A or B"; one state per value is required)
   RELATIVE      a categorical state on a trait for which other claims carry
@@ -63,11 +63,11 @@ for c in d["characters"]:
         backing = [claims[cid] for sid in stmt_by_state.get(s["id"], []) for cid in prov.get(sid, []) if cid in claims]
         if not backing:
             continue
-        if any(cl.get("qualifier") == "comparative" for cl in backing):
-            flags.append(("COMPARATIVE", t, T(s), "a supporting claim compares to another taxon or specimen"))
+        if all(cl.get("qualifier") == "comparative" for cl in backing):
+            flags.append(("COMPARATIVE", t, T(s), "every supporting claim compares to another taxon or specimen"))
         if any(isinstance(cl.get("values"), list) and len(cl["values"]) > 1 for cl in backing):
             flags.append(("BUNDLE", t, T(s), "a supporting claim lists several values; one state per value"))
-        if not any(cl.get("value_num") for cl in backing) and any(cl["trait"].lower() in numeric_traits for cl in backing):
+        if not any(cl.get("value_num") for cl in backing) and all(cl["trait"].lower() in numeric_traits for cl in backing):
             flags.append(("RELATIVE", t, T(s), "the source gives numbers for this trait elsewhere; this state has none"))
 
 out = [f"# Determinability flags for {Path(a.key).name}", "",

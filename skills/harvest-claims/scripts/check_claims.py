@@ -73,8 +73,13 @@ def parse_symbol_value(v: str):
     return None, None
 
 
+def canon(x) -> str:
+    """One spelling for a number however it is written: 90, 90.0, 90,0 -> '90'; 2,5 -> '2.5'."""
+    return "%g" % float(str(x).replace(",", "."))
+
+
 def digits_in(text: str) -> set[str]:
-    return {x.replace(",", ".").rstrip("0").rstrip(".") for x in re.findall(NUM, text)}
+    return {canon(x) for x in re.findall(NUM, text)}
 
 
 def claim_id(c: dict) -> str:
@@ -143,7 +148,7 @@ def main() -> int:
                     continue
                 seen = digits_in(c["value"]) | digits_in(c["quote"])
                 for x in vn:
-                    if x is not None and str(x).rstrip("0").rstrip(".") not in seen and str(int(x)) not in seen:
+                    if x is not None and canon(x) not in seen:
                         c["note"] = (c.get("note", "") + f" value_num {x} does not occur in value or quote; check it").strip()
                         notes += 1
                 if c["qualifier"] == "unspecified":

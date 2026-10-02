@@ -6,8 +6,6 @@ Language-neutral signals only (no word lists):
   - a "/" or "," inside the label
   - the label contains another sibling state's whole label as a word sequence
     ("brown or grey" contains "brown"): the longer one is probably a bundle
-  - the label has three or more words while a sibling has one: a qualified or
-    compound value next to an atomic one
 Quantitative characters (every state parses as a number or range) are skipped.
 
 Output: a markdown report the model reads to decide per flagged state whether
@@ -57,8 +55,6 @@ def main(argv=None) -> int:
             for sid2, l2 in labels:
                 if sid2 != sid and l2 and len(l2) >= 3 and f" {l2.lower()} " in low and len(l) > len(l2):
                     why.append(f"contains sibling label '{l2}'")
-            if len(l.split()) >= 3 and any(len(l2.split()) == 1 for _, l2 in labels):
-                why.append("three or more words beside a one-word sibling")
             if why:
                 flagged.append((sid, l, "; ".join(dict.fromkeys(why))))
         if flagged:
