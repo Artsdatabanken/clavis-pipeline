@@ -53,3 +53,7 @@ All required gates passed. 86 characters (24 numerical), 873 statements, 259 KB 
 5. `skills-ref validate` on the skills (needs `pip install skills-ref`); repo URL placeholder in README and guides.
 6. Cheaper model for harvesting (Haiku halves cache-read price); measure quality first.
 7. `translate-json`: untouched in this pass; its vernacular adapter still lives inside the skill.
+
+## Run 4 (2 October 2026, Sonnet throughout)
+
+All required gates passed. 74 characters (18 numerical), 869 statements, 253 KB; 273 of 276 pairs separated, median 7 routes; 85 minutes; USD 36 for everything including the orchestrator (run 3: USD 173). Found broken: find_sections.py wrong per-taxon pages on most books (harvesters fell back to the whole section); find_figures.py 50 minutes on scans and no usable crops without Surya layout; draft_spec.py collides same-title different-unit characters; hoist_statements.py and apply_coarsen.py crashed on numerical values (coarsen patched); plan.py omits --alias; containment matching in score_claims.py put some wrong statements that the audits caught; the orchestrator removed the M. levis look-alike copy over a name confusion. Next: fix these, then run 5 on Sonnet.
