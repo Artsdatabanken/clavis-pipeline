@@ -69,7 +69,7 @@ The model matters. The pipeline was developed and run with Claude Opus-class mod
 
 ## Models and cost
 
-Tested in Claude Code, October 2026, on a 24-species key from five books and one matrix key:
+Tested in Claude Code, October 2026, on a key to 24 species built from five printed field guides (four of them scanned books) and one existing digital matrix key:
 
 - **Recommended: Claude Opus 5.5 orchestrating, Claude Sonnet 5.5 for every agent.** 73 minutes, all gates passed, one species pair inseparable (no source separates it). About 171 M cached input tokens, mostly Sonnet; USD 56 at Claude API list prices on 2 October 2026. On a Claude Max subscription several runs fit in a day, so the practical cost per run is a few dollars.
 - All Sonnet is cheaper (USD 36) with slightly weaker keys; all Opus costs three to five times as much and is not better; Haiku 4.5 is not good enough even for harvesting.
