@@ -36,9 +36,10 @@ def rec(name):
     return cache[key]
 
 species = [t for t in d["taxa"] if not t.get("children")]
+K = lambda v: tuple(v) if isinstance(v, list) else v   # numerical [min, max] as a hashable key
 grp = collections.defaultdict(dict)
 for s in d["statements"]:
-    grp[s["taxon"]].setdefault(s["character"], {})[s["value"]] = s["frequency"]
+    grp[s["taxon"]].setdefault(s["character"], {})[K(s["value"])] = s["frequency"]
 before = {t["id"]: {c: dict(g) for c, g in grp.get(t["id"], {}).items()} for t in species}
 
 byrank = collections.defaultdict(list)
@@ -90,7 +91,7 @@ def emit(tid, gg):
     for c, st in gg.items():
         for v, f in st.items():
             out.append({"id": "statement:" + uuid.uuid4().hex, "taxon": tid,
-                        "character": c, "value": v, "frequency": f})
+                        "character": c, "value": list(v) if isinstance(v, tuple) else v, "frequency": f})
 emit(root["id"], rgrp)
 for g in groups: emit(g["id"], ggrp[g["id"]])
 for t in species: emit(t["id"], newgrp[t["id"]])
@@ -101,7 +102,7 @@ def w(ts, p=None):
     for t in ts: par[t["id"]] = p; w(t.get("children", []), t["id"])
 w(d["taxa"])
 g2 = collections.defaultdict(dict)
-for s in out: g2[s["taxon"]].setdefault(s["character"], {})[s["value"]] = s["frequency"]
+for s in out: g2[s["taxon"]].setdefault(s["character"], {})[K(s["value"])] = s["frequency"]
 def eff(t):
     ch, x = [], t
     while x: ch.append(x); x = par[x]

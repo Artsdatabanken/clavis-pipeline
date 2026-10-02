@@ -41,7 +41,7 @@ for c in d["characters"]:
     t = next(iter(c["title"].values()))
     u = c.get("unit")
     if not u: print(f"NO-UNIT  {t}: numerical character without unit"); bad += 1
-    units.setdefault(t.split("(")[0].strip().lower(), set()).add(u)
+    units.setdefault(t.split("(")[0].strip().lower(), set()).add(json.dumps(u, sort_keys=True))
     if "min" in c and "max" in c and c["min"] > c["max"]:
         print(f"RANGE    {t}: min {c['min']} > max {c['max']}"); bad += 1
     for s in d["statements"]:

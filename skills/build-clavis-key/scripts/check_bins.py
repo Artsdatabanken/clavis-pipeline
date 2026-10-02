@@ -32,6 +32,26 @@ def bounds(l):
 UNIT = re.compile(r"(mm|cm|\bm\b|km|mg|\bg\b|kg|µm|%|sek|min|time[rn]?|døgn|"
                   r"dag(er)?|uke[rn]?|måned(er)?|år|\bs\b|gram|meter)", re.I)
 bad = 0
+# Numerical characters: unit, min <= max, each taxon range inside the character
+# range. Overlap between taxa is normal (that is the data); a gap is not a defect.
+units = {}
+for c in d["characters"]:
+    if c.get("type") != "numerical":
+        continue
+    t = next(iter(c["title"].values()))
+    u = c.get("unit")
+    if not u: print(f"NO-UNIT  {t}: numerical character without unit"); bad += 1
+    units.setdefault(t.split("(")[0].strip().lower(), set()).add(json.dumps(u, sort_keys=True))
+    if "min" in c and "max" in c and c["min"] > c["max"]:
+        print(f"RANGE    {t}: min {c['min']} > max {c['max']}"); bad += 1
+    for s in d["statements"]:
+        if s["character"] != c["id"]: continue
+        v = s["value"]
+        if not (isinstance(v, list) and len(v) == 2 and all(isinstance(x, (int, float)) for x in v)):
+            print(f"VALUE    {t}: statement value {v!r} is not [min, max]"); bad += 1; continue
+        if v[0] > v[1]: print(f"VALUE    {t}: lo > hi in {v}"); bad += 1
+        if "min" in c and v[0] < c["min"] or "max" in c and v[1] > c["max"]:
+            print(f"OUTSIDE  {t}: {v} outside character range [{c.get('min')}, {c.get('max')}]"); bad += 1
 for c in d["characters"]:
     labs = [L(s) for s in (c.get("states") or [])]
     if not labs: continue

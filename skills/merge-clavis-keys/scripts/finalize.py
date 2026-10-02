@@ -31,7 +31,8 @@ w(d["taxa"])
 leaves = [i for i, t in taxa.items() if not t.get("children")]
 g = collections.defaultdict(dict)
 for s in d["statements"]:
-    g[s["taxon"]].setdefault(s["character"], {})[s["value"]] = s["frequency"]
+    v = tuple(s["value"]) if isinstance(s["value"], list) else s["value"]   # numerical [min, max]
+    g[s["taxon"]].setdefault(s["character"], {})[v] = s["frequency"]
 def eff(t):
     ch, x = [], t
     while x: ch.append(x); x = par[x]
@@ -45,7 +46,10 @@ power = collections.Counter()
 for x, y in itertools.combinations(leaves, 2):
     for c in {cc["id"] for cc in d["characters"]}:
         A, B = pos[x].get(c), pos[y].get(c)
-        if A and B and not (A & B): power[c] += 1
+        if not (A and B): continue
+        if all(isinstance(v, tuple) for v in A | B):   # numerical: separated when no ranges overlap
+            if not any(p[0] <= q[1] and q[0] <= p[1] for p in A for q in B): power[c] += 1
+        elif not (A & B): power[c] += 1
 dead = [c for c in d["characters"] if power[c["id"]] == 0]
 json.dump([T(c) for c in dead], open(a.removed, "w", encoding="utf-8"),
           ensure_ascii=False, indent=1)
@@ -64,6 +68,7 @@ def lower(l):
         return float(re.search(NUM, l).group().replace(",", "."))
     return None
 for c in d["characters"]:
+    if not c.get("states"): continue   # numerical characters have no states
     labs = [T(s) for s in c["states"]]
     if all(l.lower() in MONTHS for l in labs):
         c["states"].sort(key=lambda s: MONTHS.index(T(s).lower()))

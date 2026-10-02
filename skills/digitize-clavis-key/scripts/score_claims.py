@@ -55,6 +55,9 @@ import uuid
 from collections import defaultdict
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "harvest-claims" / "scripts"))
+from claims_vs_key import unit_factor  # mm/cm/m and g/kg converted to the character unit
+
 HERE = Path(__file__).resolve().parent
 DEFAULT_FREQ = HERE.parent.parent / "harvest-claims" / "references" / "frequency-table.json"
 
@@ -136,12 +139,18 @@ def main() -> int:
                 vn = cl.get("value_num")
                 if not vn:
                     continue
-                numeric_acc[(t, c["_id"])]["r"].append((vn[0], vn[1], cl["id"]))
+                f = unit_factor(cl.get("unit"), c.get("unit"))
+                numeric_acc[(t, c["_id"])]["r"].append((None if vn[0] is None else vn[0] * f,
+                                                        None if vn[1] is None else vn[1] * f, cl["id"]))
                 placed = True
             else:
                 v = norm(cl["value"])
                 words = f" {v} "
-                hit = [(sid, vals) for sid, vals in state_index[c["key"]] if v in vals or any(f" {x} " in words for x in vals if x)]
+                # an exact match on the whole value wins: "ikke hareskår" must not
+                # also score "hareskår", "grålig hvit" not also "hvit"
+                hit = [(sid, vals) for sid, vals in state_index[c["key"]] if v in vals]
+                if not hit:
+                    hit = [(sid, vals) for sid, vals in state_index[c["key"]] if any(f" {x} " in words for x in vals if x)]
                 if not hit:
                     continue
                 q = cl.get("qualifier", "unspecified")
@@ -156,6 +165,8 @@ def main() -> int:
     # numerical: union of each taxon's ranges; an open side closes at the
     # character's min/max from the design, else at the extreme over all taxa
     # with a known bound, else the claim goes to the residue
+    design_min = {x["id"]: x.get("min") for x in chars_out if x["type"] == "numerical"}
+    design_max = {x["id"]: x.get("max") for x in chars_out if x["type"] == "numerical"}
     known_lo, known_hi = defaultdict(list), defaultdict(list)
     for (t, cid), d in numeric_acc.items():
         for lo, hi, _ in d["r"]:
@@ -164,10 +175,15 @@ def main() -> int:
     for (t, cid), d in numeric_acc.items():
         rs = d["r"]
         c = next(x for x in chars_out if x["id"] == cid)
-        los = [lo for lo, hi, _ in rs if lo is not None]
-        his = [hi for lo, hi, _ in rs if hi is not None]
-        lo = min(los) if los else c.get("min", min(known_lo[cid]) if known_lo[cid] else None)
-        hi = max(his) if his else c.get("max", max(known_hi[cid]) if known_hi[cid] else None)
+        # close each claim's open side at the design min/max, else at the extreme
+        # over ALL taxa (not the running min/max of statements written so far),
+        # then take the union over the taxon's claims (an open bound must not
+        # vanish because another claim of the same taxon has a closed one)
+        fb_lo = design_min[cid] if design_min.get(cid) is not None else (min(known_lo[cid]) if known_lo[cid] else None)
+        fb_hi = design_max[cid] if design_max.get(cid) is not None else (max(known_hi[cid]) if known_hi[cid] else None)
+        closed = [(fb_lo if l is None else l, fb_hi if h is None else h) for l, h, _ in rs]
+        lo = None if any(l is None for l, _ in closed) else min(l for l, _ in closed)
+        hi = None if any(h is None for _, h in closed) else max(h for _, h in closed)
         tname = next(x["scientificName"] for x in taxa_out if x["id"] == t)
         if lo is not None and hi is not None and hi < lo:
             hi = None  # the fallback max over other taxa is below this taxon's open lower bound

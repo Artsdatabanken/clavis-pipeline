@@ -77,6 +77,10 @@ def main() -> int:
     ap.add_argument("--out", required=True, type=Path)
     ap.add_argument("--names", type=Path, help="extra names per taxon, JSON {taxon: [names]}")
     ap.add_argument("--min-hits", type=int, default=2)
+    ap.add_argument("--pages-override", type=Path,
+                    help="JSON {taxon: [pdf pages or 'a-b' ranges]} set by the orchestrator after reading the "
+                         "source; replaces the heuristic run for those taxa (books with an overview plate or "
+                         "key ahead of the species accounts defeat 'first mention in section')")
     a = ap.parse_args()
 
     pages = pages_of(a.text.read_text(encoding="utf-8", errors="replace"))
@@ -147,6 +151,21 @@ def main() -> int:
             p1 = max(p0, min(p1, p0 + 5))
             result[t]["best"] = list(range(p0, p1 + 1))
 
+    override = {}
+    if a.pages_override:
+        for t, spec in json.loads(a.pages_override.read_text(encoding="utf-8")).items():
+            ps = set()
+            for x in spec:
+                if isinstance(x, str) and "-" in x:
+                    lo, hi = map(int, x.split("-")); ps.update(range(lo, hi + 1))
+                else:
+                    ps.add(int(x))
+            override[t] = sorted(ps)
+        for t, ps in override.items():
+            if t in result:
+                result[t]["best"] = ps
+                result[t]["override"] = True
+
     a.out.mkdir(parents=True, exist_ok=True)
     meta = {"source_text": str(a.text), "pdf_pages": len(pages), "printed_page_offset": offset,
             "section_pdf_pages": section, "taxa": result,
@@ -171,9 +190,12 @@ def main() -> int:
         write_pages(a.out / "section.txt", list(range(section[0], section[1] + 1)), head)
     for t, r in result.items():
         if r["best"]:
-            ps = list(range(max(1, r["best"][0]), min(len(pages), r["best"][-1] + 1) + 1))
+            if r.get("override"):
+                ps = r["best"]
+            else:
+                ps = list(range(max(1, r["best"][0]), min(len(pages), r["best"][-1] + 1) + 1))
             write_pages(a.out / (re.sub(r"[^A-Za-z0-9]+", "_", t).strip("_") + ".txt"), ps,
-                        head + f"# Taxon: {t}. From its first mention in the section to the next taxon's, padded one page. All mentions on PDF pages: {r['pages']}\n")
+                        head + (f"# Taxon: {t}. Pages chosen by the orchestrator: {ps}. All mentions on PDF pages: {r['pages']}\n" if r.get("override") else f"# Taxon: {t}. From its first mention in the section to the next taxon's, padded one page. All mentions on PDF pages: {r['pages']}\n"))
 
     print(f"{len(pages)} PDF pages; printed-page offset {offset if offset is not None else 'unknown'}")
     print(f"proposed section: PDF pages {section}" if section else "no section found")

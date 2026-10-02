@@ -16,7 +16,15 @@ different things in different source characters):
       "<source tag>": {
         "<source character title>": {              # as titled in the source key
           "<source state label>": ["label a"],     # one or more canonical labels; [] = says nothing
-          ...                                      # numerical members: {} (ranges pass through)
+          ...                                      # numerical members: {} (ranges pass through),
+                                                   # or {"scale": 10} when the source unit differs
+                                                   # (cm -> mm); ranges are multiplied by scale.
+                                                   # {"bound": true}: the source's ranges that touch
+                                                   # its character's min or max are key thresholds
+                                                   # ("shorter than 30 cm", open end closed at a chosen
+                                                   # limit), not measurements: they give way to the
+                                                   # measured ranges they overlap, and stand only
+                                                   # where nothing was measured or they disagree
         }
       }
     }
@@ -76,7 +84,11 @@ for st in d["statements"]:
         v = spec[canon]
         if v["type"] == "numerical":
             if isinstance(st["value"], list) and len(st["value"]) == 2:
-                num[(st["taxon"], canon)].append((st["value"][0], st["value"][1], src))
+                mm = v["members"][src][title] or {}
+                f = mm.get("scale", 1)
+                sc = char[st["character"]]
+                bnd = bool(mm.get("bound")) and (st["value"][0] <= sc.get("min", float("-inf")) or st["value"][1] >= sc.get("max", float("inf")))
+                num[(st["taxon"], canon)].append((st["value"][0] * f, st["value"][1] * f, src, bnd))
             else:
                 sys.exit(f"ERROR: {canon}: source {src} '{title}' is mapped as numerical but carries state values; convert its bins to ranges first")
             continue
@@ -90,6 +102,12 @@ for st in d["statements"]:
         for t in tg: u[t] = max(u.get(t, 0.0), st["frequency"])
 
 final, conflicts, narrowed, intra = {}, [], [], []
+for key, rs in list(num.items()):          # thresholds give way to overlapping measurements
+    meas = [r for r in rs if not r[3]]
+    if not meas or len(meas) == len(rs): continue
+    lo, hi = min(r[0] for r in meas), max(r[1] for r in meas)
+    if all(r[0] <= hi and lo <= r[1] for r in rs if r[3]):
+        num[key] = meas; narrowed.append(key)
 for (tx, canon), bysrc in acc.items():
     typ = spec[canon]["type"]
     if typ == "non-exclusive":

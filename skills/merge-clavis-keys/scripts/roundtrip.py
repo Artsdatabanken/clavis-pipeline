@@ -13,14 +13,19 @@ Claim = (source, species, source character, canonical axis). Outcomes:
              non-exclusive: EVERY asserted state still > 0;
              numerical: the merged range contains the source range
   narrowed   survived, but not every asserted value is still reachable
-             (a more precise source cut it); counted inside survived
+             (a more precise source cut it), or a threshold range of a
+             {"bound": true} member gave way to measurements it overlaps;
+             counted inside survived
   removed    the canonical character, or this species' statements on it, are
              listed in removed.json (deliberate); format either a list of
              titles or {title: {"species": "all" | [names]}}
   LOST       anything else, including a source character absent from spec
              and a label that maps to nothing on every axis (UNREPRESENTED)
 Renames ({"Canonical": {"old label": "new label"}, "__characters__": {"old
-title": "new title"}}) are chained in the order given. Exit 1 on any loss.
+title": "new title"}}) are chained in the order given; a label renamed to
+"[lo, hi]" on a character that is now numerical (bins converted by the
+determinability pass) survives when the range lies inside the merged range.
+Exit 1 on any loss.
 """
 import argparse, collections, csv, json, os, sys
 
@@ -113,8 +118,14 @@ for path in a.sources:
                     src_r = [k for k, _ in pos if isinstance(k, tuple)]
                     if not rng or not src_r: n["LOST"] += 1; losses.append((src, name, canon, "no range in merged key")); continue
                     lo, hi = min(r[0] for r in rng), max(r[1] for r in rng)
+                    mm = v["members"][src][title] or {}
+                    f = mm.get("scale", 1)
+                    sc = next(c for c in d["characters"] if c["id"] == cid)
                     slo, shi = min(r[0] for r in src_r), max(r[1] for r in src_r)
+                    bnd = bool(mm.get("bound")) and (slo <= sc.get("min", float("-inf")) or shi >= sc.get("max", float("inf")))
+                    slo, shi = slo * f, shi * f
                     if lo <= slo and shi <= hi: n["survived"] += 1
+                    elif bnd and lo <= shi and slo <= hi: n["survived"] += 1; n["narrowed"] += 1
                     else: n["LOST"] += 1; losses.append((src, name, canon, f"source range [{slo}, {shi}] not inside merged [{lo}, {hi}]"))
                     continue
                 mp = v["members"][src][title]
@@ -127,6 +138,16 @@ for path in a.sources:
                 e = mE[byname[name]].get(mc["id"], {})
                 reach = {mlab[k] for k, f in e.items() if f > 0 and k in mlab}
                 need = {ren(canon, t) for tg in per_label.values() for t in tg}
+                if mc.get("type") == "numerical":   # bins converted to a numerical character; renames map labels to "[lo, hi]"
+                    rng = [k for k in e if isinstance(k, tuple)]
+                    try: want = [tuple(json.loads(x)) for x in need]
+                    except (ValueError, TypeError): want = []
+                    inside = [min(r[0] for r in rng) <= w[0] and w[1] <= max(r[1] for r in rng) for w in want] if rng else []
+                    if inside and (all(inside) if v["type"] == "non-exclusive" else any(inside)):   # exclusive: one surviving value suffices, as for labels
+                        n["survived"] += 1
+                        if not all(inside): n["narrowed"] += 1
+                    else: n["LOST"] += 1; losses.append((src, name, canon, f"bins {sorted(need)} not inside merged ranges {sorted(rng)}"))
+                    continue
                 if v["type"] == "non-exclusive":
                     if need <= reach: n["survived"] += 1
                     else: n["LOST"] += 1; losses.append((src, name, canon, f"states {sorted(need - reach)} gone; merged has {sorted(reach)}"))

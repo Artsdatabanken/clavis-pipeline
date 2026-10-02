@@ -92,7 +92,7 @@ missing = [k for k in keep if k not in inkey]
 G[7] = (True, f"{len(inkey & set(keep))} of {len(keep)} listed species in the key" + (f"; not covered: {', '.join(missing)}" if missing else ""))
 
 if a.run_start and os.path.exists(a.run_start):
-    start = open(a.run_start).read().strip()
+    start = open(a.run_start).read().strip()[:16]  # token_report wants "YYYY-MM-DD HH:MM"
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     cmd = [sys.executable, os.path.join(REPO, "tools/token_report.py"), "--since", start, "--until", now, "--out", os.path.join(a.out, "tokens.md")]
     if a.match: cmd += ["--match", a.match]

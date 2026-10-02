@@ -24,6 +24,8 @@ import sys
 import unicodedata
 from collections import defaultdict
 from pathlib import Path
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parents[2] / "harvest-claims" / "scripts"))
+from claims_vs_key import unit_factor  # claim units converted like claims_vs_key.py
 
 
 def norm(s: str) -> str:
@@ -68,8 +70,9 @@ def main() -> int:
                 if not vn or not isinstance(s["value"], list):
                     continue
                 lo, hi = s["value"]
-                clo = vn[0] if vn[0] is not None else lo
-                chi = vn[1] if vn[1] is not None else hi
+                f = unit_factor(cl.get("unit"), c.get("unit"))
+                clo = vn[0] * f if vn[0] is not None else lo
+                chi = vn[1] * f if vn[1] is not None else hi
                 if clo < lo or chi > hi:
                     outside.append((text(c["title"]), cl["taxon"], cl["value"], s["value"], cl["page"]))
                 else:

@@ -30,6 +30,21 @@ from collections import defaultdict
 from pathlib import Path
 
 
+
+_UNITS = {"mm": ("len", 1), "cm": ("len", 10), "dm": ("len", 100), "m": ("len", 1000),
+          "mg": ("mass", 0.001), "g": ("mass", 1), "kg": ("mass", 1000)}
+
+
+def unit_factor(claim_unit, key_unit) -> float:
+    """Factor converting a claim's number into the key character's unit (cm -> mm = 10).
+    Unknown or missing units, or different quantities, give 1 (compared as written)."""
+    if isinstance(key_unit, dict):
+        key_unit = next(iter(key_unit.values()), None)
+    cu, ku = (str(claim_unit or "").strip().lower(), str(key_unit or "").strip().lower())
+    if cu in _UNITS and ku in _UNITS and _UNITS[cu][0] == _UNITS[ku][0]:
+        return _UNITS[cu][1] / _UNITS[ku][1]
+    return 1.0
+
 def read_jsonl(p: Path | None) -> list[dict]:
     if not p:
         return []
@@ -105,8 +120,9 @@ def main() -> int:
                         unsupported.append((sid, f"references unknown claim {cid}"))
                     elif isinstance(s["value"], list) and claims[cid].get("value_num"):
                         lo, hi = s["value"]; vn = claims[cid]["value_num"]
-                        clo = vn[0] if vn[0] is not None else lo
-                        chi = vn[1] if vn[1] is not None else hi
+                        f = unit_factor(claims[cid].get("unit"), chars.get(s["character"], {}).get("unit"))
+                        clo = vn[0] * f if vn[0] is not None else lo
+                        chi = vn[1] * f if vn[1] is not None else hi
                         if clo < lo or chi > hi:
                             unsupported.append((sid, f"range {s['value']} does not cover claim {cid} ({claims[cid]['value']})"))
                 continue
