@@ -46,7 +46,7 @@ Every agent in a run must use the model the run was started with, and nothing mo
 
 To run on another model (Sonnet 5.5 for the comparison), change the value in `.claude/settings.json` and in the three agent files; nothing else.
 
-Validated on Claude Opus (4.7 through 5.5). Claude Sonnet 5.5 (released 28 September 2026, `claude-sonnet-5-5`) is the intended default because of cost, but has not been run through a full job yet; when it has, this line gets updated with the comparison. Whatever the model, use the default effort or higher for digitize and audit; those are the judgment-heavy steps. Refine, merge and translate are mostly scripts and tolerate a cheaper setting.
+Validated on Claude Opus 5.5 (full rodent run, 1 October 2026) with the pipeline as it was then; the current version (claims-driven digitization, numerical characters, determinability pass, gate runner) has not had its first full run yet. Claude Sonnet 5.5 (`claude-sonnet-5-5`) is the intended cheaper default once compared on the same job. Whatever the model, use the default effort or higher for digitize and audit; those are the judgment-heavy steps. Refine, merge and translate are mostly scripts and tolerate a cheaper setting.
 
 Vision matters: the digitizer reads page images directly to catch the labels around figures that OCR drops. All current Claude models have it.
 

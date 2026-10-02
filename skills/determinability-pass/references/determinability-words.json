@@ -1,0 +1,33 @@
+{
+  "_comment": "Words that make a state unanswerable from one specimen. comparative: needs another specimen or experience; bundle: joins alternatives; relative: size/degree without a number. Per ISO 639-1 language. Extend as sources arrive.",
+  "en": {
+    "comparative": ["than", "larger", "smaller", "bigger", "longer", "shorter", "darker", "lighter", "paler", "more", "less", "compared", "relatively", "unlike", "like the", "as in", "similar to"],
+    "bundle": [" or ", "and/or", "sometimes", "occasionally", "rarely", "usually"],
+    "relative": ["small", "large", "big", "long", "short", "tiny", "huge", "medium", "broad", "narrow", "thick", "thin", "high", "low", "wide", "dark", "light", "pale"]
+  },
+  "nb": {
+    "comparative": ["enn", "større", "mindre", "lengre", "kortere", "mørkere", "lysere", "blekere", "mer", "mindre", "sammenlignet", "relativt", "i motsetning til", "som hos", "lik", "ligner"],
+    "bundle": [" eller ", "iblant", "av og til", "sjelden", "vanligvis", "ofte", "noen ganger"],
+    "relative": ["liten", "lite", "små", "stor", "store", "lang", "lange", "kort", "korte", "middels", "bred", "smal", "tykk", "tynn", "høy", "lav", "vid", "mørk", "lys", "blek"]
+  },
+  "nn": {
+    "comparative": ["enn", "større", "mindre", "lengre", "kortare", "mørkare", "lysare", "bleikare", "meir", "samanlikna", "relativt", "i motsetnad til", "som hos", "liknar"],
+    "bundle": [" eller ", "iblant", "av og til", "sjeldan", "vanlegvis", "ofte", "somme tider"],
+    "relative": ["liten", "lite", "små", "stor", "store", "lang", "lange", "kort", "korte", "middels", "brei", "smal", "tjukk", "tynn", "høg", "låg", "vid", "mørk", "lys", "bleik"]
+  },
+  "sv": {
+    "comparative": ["än", "större", "mindre", "längre", "kortare", "mörkare", "ljusare", "blekare", "mer", "jämfört", "relativt", "till skillnad från", "som hos", "liknar"],
+    "bundle": [" eller ", "ibland", "sällan", "vanligtvis", "ofta", "stundom"],
+    "relative": ["liten", "små", "stor", "lång", "kort", "medelstor", "bred", "smal", "tjock", "tunn", "hög", "låg", "vid", "mörk", "ljus", "blek"]
+  },
+  "de": {
+    "comparative": ["als", "größer", "kleiner", "länger", "kürzer", "dunkler", "heller", "blasser", "mehr", "weniger", "verglichen", "relativ", "im Gegensatz zu", "wie bei", "ähnlich"],
+    "bundle": [" oder ", "manchmal", "gelegentlich", "selten", "meist", "oft", "bisweilen"],
+    "relative": ["klein", "groß", "lang", "kurz", "mittelgroß", "breit", "schmal", "dick", "dünn", "hoch", "niedrig", "weit", "dunkel", "hell", "blass"]
+  },
+  "nl": {
+    "comparative": ["dan", "groter", "kleiner", "langer", "korter", "donkerder", "lichter", "bleker", "meer", "minder", "vergeleken", "relatief", "in tegenstelling tot", "zoals bij", "lijkt op"],
+    "bundle": [" of ", "soms", "af en toe", "zelden", "meestal", "vaak", "nu en dan"],
+    "relative": ["klein", "groot", "lang", "kort", "middelgroot", "breed", "smal", "dik", "dun", "hoog", "laag", "wijd", "donker", "licht", "bleek"]
+  }
+}

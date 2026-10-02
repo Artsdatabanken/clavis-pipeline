@@ -25,7 +25,8 @@ def load(path):
     leaves = [i for i, t in taxa.items() if not t.get("children")]
     byt = collections.defaultdict(dict)
     for s in d["statements"]:
-        byt[s["taxon"]][(s["character"], s["value"])] = s["frequency"]
+        v = tuple(s["value"]) if isinstance(s["value"], list) else s["value"]
+        byt[s["taxon"]][(s["character"], v)] = s["frequency"]
     def eff(t):
         c, x = [], t
         while x: c.append(x); x = par[x]
@@ -41,21 +42,31 @@ def analyse(d, lv, E, M):
     grp = {}
     for c in d["characters"]:
         m = M.get(T(c), {})
-        for s in c["states"]: grp[s["id"]] = m.get(L(s), L(s))
+        for s in c.get("states") or []: grp[s["id"]] = m.get(L(s), L(s))
     POS, conf, tot = {}, 0, 0
     for l in lv:
         mm = collections.defaultdict(set)
         for (c, s), f in E[l].items():
-            if f > 0: mm[c].add(grp[s])
+            if f > 0: mm[c].add(grp.get(s, s))
         POS[l] = mm
         for v in mm.values():
             tot += 1; conf += (len(v) == 1)
     sep = collections.defaultdict(set); pc = collections.Counter()
     cids = [c["id"] for c in d["characters"]]
+    numeric = {c["id"] for c in d["characters"] if c.get("type") == "numerical"}
+    def disjoint(c, A, B):
+        if c in numeric:
+            # values are (lo, hi) tuples; ranges separate when they do not overlap
+            ra = [x for x in A if isinstance(x, tuple)]; rb = [x for x in B if isinstance(x, tuple)]
+            if not ra or not rb: return False
+            lo_a, hi_a = min(x[0] for x in ra), max(x[1] for x in ra)
+            lo_b, hi_b = min(x[0] for x in rb), max(x[1] for x in rb)
+            return hi_a < lo_b or hi_b < lo_a
+        return not (A & B)
     for a, b in itertools.combinations(lv, 2):
         for c in cids:
             A, B = POS[a].get(c), POS[b].get(c)
-            if A and B and not (A & B): sep[(a, b)].add(c); pc[c] += 1
+            if A and B and disjoint(c, A, B): sep[(a, b)].add(c); pc[c] += 1
     return sep, conf, tot, pc
 
 if __name__ == "__main__":

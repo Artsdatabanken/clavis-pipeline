@@ -1,0 +1,57 @@
+{
+  "_comment": "Words that mark how often a trait holds, per ISO 639-1 language. Used by check_claims.py to fill in `qualifier` when the harvester left it unspecified, and by score_claims.py to turn a qualifier into a frequency through frequency-table.json. Add languages as sources arrive.",
+  "en": {
+    "always": ["always", "invariably", "constantly"],
+    "usually": ["usually", "mostly", "generally", "typically", "normally", "as a rule", "often", "commonly"],
+    "sometimes": ["sometimes", "occasionally", "at times", "may be", "can be", "or", "varies"],
+    "rarely": ["rarely", "seldom", "exceptionally", "very rarely", "in rare cases"]
+  },
+  "nb": {
+    "always": ["alltid", "bestandig"],
+    "usually": ["vanligvis", "oftest", "som regel", "stort sett", "gjerne", "ofte", "for det meste", "i regelen"],
+    "sometimes": ["av og til", "iblant", "noen ganger", "kan være", "stundom", "eller", "varierer", "enkelte"],
+    "rarely": ["sjelden", "sjeldent", "unntaksvis", "svært sjelden", "i sjeldne tilfeller"]
+  },
+  "nn": {
+    "always": ["alltid", "støtt"],
+    "usually": ["vanlegvis", "oftast", "som regel", "stort sett", "gjerne", "ofte", "for det meste"],
+    "sometimes": ["av og til", "iblant", "somme tider", "kan vere", "stundom", "eller", "varierer"],
+    "rarely": ["sjeldan", "unntaksvis", "svært sjeldan"]
+  },
+  "sv": {
+    "always": ["alltid", "ständigt"],
+    "usually": ["vanligtvis", "oftast", "i regel", "mestadels", "gärna", "ofta", "för det mesta"],
+    "sometimes": ["ibland", "stundom", "kan vara", "eller", "varierar", "emellanåt"],
+    "rarely": ["sällan", "undantagsvis", "mycket sällan"]
+  },
+  "da": {
+    "always": ["altid"],
+    "usually": ["sædvanligvis", "oftest", "som regel", "for det meste", "ofte", "normalt"],
+    "sometimes": ["undertiden", "af og til", "somme tider", "kan være", "eller", "varierer"],
+    "rarely": ["sjældent", "undtagelsesvis", "meget sjældent"]
+  },
+  "de": {
+    "always": ["immer", "stets", "ausnahmslos"],
+    "usually": ["meist", "meistens", "gewöhnlich", "in der Regel", "überwiegend", "oft", "häufig", "normalerweise"],
+    "sometimes": ["manchmal", "gelegentlich", "zuweilen", "bisweilen", "kann", "oder", "variiert"],
+    "rarely": ["selten", "ausnahmsweise", "sehr selten"]
+  },
+  "nl": {
+    "always": ["altijd", "steeds"],
+    "usually": ["meestal", "gewoonlijk", "doorgaans", "in de regel", "vaak", "normaal", "overwegend"],
+    "sometimes": ["soms", "af en toe", "nu en dan", "kan", "of", "varieert", "bij tijd en wijle"],
+    "rarely": ["zelden", "bij uitzondering", "zeer zelden"]
+  },
+  "fr": {
+    "always": ["toujours", "invariablement"],
+    "usually": ["généralement", "habituellement", "le plus souvent", "d'ordinaire", "souvent", "en règle générale"],
+    "sometimes": ["parfois", "quelquefois", "à l'occasion", "peut être", "ou", "variable"],
+    "rarely": ["rarement", "exceptionnellement", "très rarement"]
+  },
+  "es": {
+    "always": ["siempre", "invariablemente"],
+    "usually": ["generalmente", "normalmente", "habitualmente", "por lo general", "a menudo", "frecuentemente"],
+    "sometimes": ["a veces", "ocasionalmente", "en ocasiones", "puede ser", "o", "variable"],
+    "rarely": ["raramente", "rara vez", "excepcionalmente", "muy raramente"]
+  }
+}

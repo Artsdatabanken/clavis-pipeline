@@ -1,82 +1,69 @@
 ---
 name: harvest-claims
-description: Extract every observable claim a source makes about each taxon into a claims.jsonl file, one claim per line with trait, value, qualifier, verbatim quote and page. One job per taxon (or page chunk), no character design, no scoring. Use before digitize-clavis-key to give it a complete, checkable inventory of what the source asserts, and after a key is finished to check both directions: every statement traces to a claim, every claim reached the key or was deliberately skipped. Also use when the user asks "did we miss anything in the book" or "where does this statement come from".
+description: Extract every observable claim a source makes about each taxon into claims.jsonl, one claim per line with trait, value, qualifier, verbatim quote and page; numbers and units parsed, duplicates removed, stable ids. Runs before digitize-clavis-key (one job per taxon per source) and gives the audit and the final gate what they measure against. Also finds each taxon's pages and the figures in a source so harvesters read small files and crops, not whole books. Use when building a key, or when the user asks "did we miss anything in the book" or "where does this statement come from".
 license: MIT
-compatibility: Python 3.11+. A model with vision for figure plates; text-only otherwise. No network.
+compatibility: Python 3.11+. poppler (pdftotext, pdfimages, pdftoppm) for PDFs; pypdf as fallback for text. A model with vision for figure crops. Network only for taxon_names.py.
 metadata:
   author: Artsdatabanken
-  version: "0.1"
+  version: "1.1"
   pipeline: clavis-pipeline
 ---
 
 # Harvest claims from a source
 
-**Never delete or overwrite the user's files.** New files only.
+**Never delete or overwrite the user's files.** New files only, under `work/<source>/`.
 
-This skill does one thing: it turns a source into a flat inventory of claims. A claim is one observable thing the source says about one taxon: "tail longer than body", "weight 20–35 g", "belly usually white, occasionally gray". No characters, no states, no frequencies, no decisions about what matters. Those come later, from this inventory, in `digitize-clavis-key`.
+This skill does one thing: it turns a source into a flat inventory of claims. A claim is one observable thing the source says about one taxon: "tail longer than body", "weight 20–35 g", "belly usually white". No characters, no states, no frequencies, no decisions about what matters. Those come later, from this inventory, in `digitize-clavis-key`.
 
-Inside `build-clavis-key` this runs on every source before digitization (Phase 0c), and its check runs inside every audit and in the final gate. Why a separate job: a digitizer reading forty pages and designing a key at the same time skips things. A harvester that only has to list what one species' pages say, in a fresh context, with a verbatim quote for each line, is hard to argue with and easy to check against the page.
+Inside `build-clavis-key` this runs on every source before digitization (Phase 0c), and its check runs inside every audit and in the final gate. Why a separate job: a digitizer reading forty pages and designing a key at the same time skips things. A harvester that only has to list what one taxon's pages say, in a fresh context, with a verbatim quote for each line, is hard to argue with and easy to check against the page.
 
-## Inputs to gather (ask only if missing)
+## Preparing a source (the orchestrator does this once per source)
 
-- **Source**: the extracted text (see `digitize-clavis-key/references/source-extraction.md`) and the page images, or a PDF with a text layer.
-- **Taxon list**: the species CSV from `build-clavis-key`, or the list of taxa the source covers. One job per taxon.
-- **Output folder**: `work/claims/` next to the source. One file per taxon, merged at the end.
+1. **Text once.** `pdftotext -layout BOOK.pdf work/<source>/full.txt` (pages separated by form feeds). Without poppler: `python -c "import pypdf,sys; r=pypdf.PdfReader(sys.argv[1]); print('\f'.join(p.extract_text() or '' for p in r.pages))" BOOK.pdf > work/<source>/full.txt`. A scanned book without a text layer goes through `tools/ocr_pdf.py --layout` first (Surya), which also writes `layout.json` with figure regions.
+2. **Names.** `scripts/taxon_names.py species.csv --lang <source language> --out work/<source>/names.json` adds vernacular names and abbreviated binomials; books rarely repeat the Latin name.
+3. **Pages per taxon.** `scripts/find_sections.py work/<source>/full.txt --taxa species.csv --names work/<source>/names.json --out work/<source>/` writes `pages.json` (the proposed section, the printed-page offset, each taxon's pages), `section.txt`, and one `<Taxon>.txt` per taxon. Confirm only the two edge pages of the section by reading them; extend the section if a taxon's description spills over. Taxa reported `NOT FOUND` or `outside section` need a look: a missing synonym in `names.json`, or the source does not treat them.
+4. **Figures.** `scripts/find_figures.py BOOK.pdf --pages <section> --text work/<source>/full.txt [--layout work/<source>/layout.json] --out work/<source>/figures.json --render work/<source>/figures/` lists every figure, plate and table with a page, a crop when a bounding box is known, and the caption text. Harvesters get these PNGs. Nobody renders or reads whole pages by default.
 
-## The job, per taxon
+Each harvester then receives: its `<Taxon>.txt`, the entries of `figures.json` whose pages fall inside its pages, the taxon name, and the output path. Nothing else.
 
-1. Find every passage about the taxon: its description, its couplets in the printed key, its row in any comparison table, its figure plates and their labels. Note the pages.
-2. Write one claim per observable assertion. Split bundled sentences: "stem hairy, leaves toothed, flowers yellow" is three claims. Keep the qualifier the source uses: always, usually, sometimes, rarely, or a range with units. Keep the verbatim quote, in the source language, and the page.
-3. Comparative claims ("larger than X", "unlike Y, lacks Z") are claims about this taxon; record the comparison in `value` as the source states it. Do not resolve it into absolute terms.
-4. Figure labels count. Read the plate with vision, and record each labeled feature as a claim with `quote` set to the label text and `page` to the plate.
-5. Claims that cannot be observed on a specimen or find (litter size, lifespan, diet) are still recorded; mark them `observable: false`. The key design step decides what to drop, and the final audit needs to know they were seen.
-6. Do not look at other taxa's pages to fill gaps, and do not add what you know from elsewhere. A claim without a quote is not a claim.
+## The job, per taxon (the harvester)
 
-Write the claims as JSON lines; the fields are in `references/claim-schema.md`. Then:
+1. Read your taxon file. Every passage about the taxon counts: its description, its couplets in the printed key, its row in a comparison table, the figure crops listed for your pages with their labels.
+2. Write one claim per observable assertion. Split bundled sentences: "stem hairy, leaves toothed, flowers yellow" is three claims; "usually white, rarely grey" is two claims with their own qualifiers. Keep the qualifier the source uses (always, usually, sometimes, rarely, or a range). Keep the verbatim quote, in the source language, and the printed page from the page marker.
+3. Measurements are written as the source gives them, with the unit: `3–6 g`, `opptil 2,5 cm`, `over 24 mm`. The checker parses them; do not convert or round.
+4. Comparative claims ("larger than X", "darker than the field vole") are claims about this taxon; record the comparison in `value` as stated, qualifier `comparative`. Do not resolve it into absolute terms; that is a later decision.
+5. Figure labels count. Read the crop with vision and record each labeled feature as a claim with `kind: "figure"`, `quote` set to the label text and `page` to the plate.
+6. Claims that cannot be observed on a specimen or find (litter size, lifespan, diet) are still recorded, with `observable: false`. The key design decides what to drop, and the final audit needs to know they were seen.
+7. Open a whole page image only when the text for that page is unreadable (OCR garbage). Do not read other taxa's pages, and add nothing from your own knowledge. A claim without a quote is not a claim.
+8. Write `work/<source>/claims/<Taxon>.jsonl` (fields in `references/claim-schema.md`), then run `scripts/check_claims.py work/<source>/claims/<Taxon>.jsonl --out work/<source>/claims/<Taxon>.checked.jsonl --lang <source language>` and fix what it rejects. A claim it marks `note: quote carries more than one frequency word` must be split into one claim per value. Report the number of claims and the pages you read.
 
-```
-python3 scripts/check_claims.py work/claims/*.jsonl --out work/claims.jsonl
-```
-
-This validates every line, drops exact duplicates, assigns stable ids, and prints counts per taxon. Fix what it rejects and re-run.
+The orchestrator merges all taxa with the same script into `work/<source>/claims.jsonl`: `scripts/check_claims.py work/<source>/claims/*.checked.jsonl --out work/<source>/claims.jsonl --lang <lang>`. It normalizes, parses `value_num` and `unit`, fills missing qualifiers from the quote, drops duplicates and assigns stable ids.
 
 ## Checking a key against the claims
 
-Two directions, both deterministic once the key's statements carry provenance.
+Two directions, both deterministic once the key's statements carry provenance (`provenance.jsonl`, `skipped.jsonl`; formats in `references/claim-schema.md`):
 
 ```
-python3 scripts/claims_vs_key.py work/claims.jsonl KEY.json --provenance work/provenance.jsonl --skipped work/skipped.jsonl --out work/claims-audit.md
+python3 scripts/claims_vs_key.py work/<source>/claims.jsonl KEY.json --provenance provenance.jsonl --skipped skipped.jsonl --out claims-audit.md
 ```
 
-- **Statement → claim**: every statement in the key lists the claim ids it came from (`provenance.jsonl`). A statement with none is reported, unless it is inherited from an ancestor the script can prove.
+- **Statement → claim**: every statement lists the claims it rests on; a numerical statement's range must cover each cited claim's number. A statement with none is reported, unless it is hoisted and every leaf under it is covered.
 - **Claim → statement**: every claim appears in some statement's provenance, or in `skipped.jsonl` with a reason. Anything else is a gap.
 
-Formats for `provenance.jsonl` and `skipped.jsonl` are in `references/claim-schema.md`.
+Exit 1 on any finding. This is gate 3 of `build-clavis-key` and part of audit Phase 1.
 
 ## Checking a key that has no provenance ("did we miss anything?")
 
-Any key made before this skill existed has no provenance. The whole procedure, from the user naming a source and a finished key to a written answer, is yours to run; do not hand steps back to the user.
+Any key made before this skill existed has no provenance. The whole procedure is yours to run from the user's one sentence; do not hand steps back.
 
-1. Harvest the claims as above, one job per taxon, into `work/claims/`, then merge with `check_claims.py`. Fix rejections yourself.
-2. Build the worksheet:
-
-   ```
-   python3 scripts/claims_vs_key.py work/claims.jsonl KEY.json --out work/claims-worksheet.md
-   ```
-
-   It lists every claim with the key's characters that share words with it, and the taxon's statements on those characters. The candidates are hints, not matches.
-3. Fill in every `verdict:` line in the worksheet. Exactly one of:
-   - `covered: <statement id or character title>`: the key encodes this claim for this taxon, possibly in coarser terms (a bin that contains the value counts).
-   - `skipped: <reason>`: not observable, single-taxon trait, no variation across taxa, duplicate, out of scope.
-   - `missing`: the source says it, it would separate taxa, and the key does not have it.
-   Decide from the quote and the key, and open the source page when the quote is not enough. Do not mark `covered` on a word match alone.
-4. Write `work/claims-audit.md`: the counts (covered, skipped by reason, missing), every `missing` claim with taxon, page and quote, and a short list of the `covered` claims where the key is clearly coarser than the source. End with one paragraph: does the key miss discriminating information, and where.
-5. Report the counts and the missing list to the user. If nothing is missing, say so plainly.
-
-This procedure is also the test of whether harvesting is worth doing before digitization: the number of `missing` claims is the answer.
+1. Prepare the source and harvest as above.
+2. `scripts/claims_vs_key.py work/<source>/claims.jsonl KEY.json --out work/claims-worksheet.md` writes a worksheet: every claim with the key's characters sharing words with it and the taxon's statements on those characters. Hints, not matches.
+3. Fill in every `verdict:` line: `covered: <statement or character>` (a range containing the value counts), `skipped: <reason>` (not observable, single taxon, no variation, duplicate, out of scope), or `missing` (the source says it, it would separate taxa, the key lacks it). Open the page when the quote is not enough. Never mark covered on a word match alone.
+4. Write `work/claims-audit.md`: counts, every `missing` claim with taxon, page and quote, the `covered` claims where the key is clearly coarser than the source, and one paragraph on whether the key misses discriminating information.
+5. Report the counts and the missing list. If nothing is missing, say so plainly.
 
 ## What this skill does not do
 
-- Design characters or states, bin measurements, or score frequencies.
+- Design characters or states, bin or convert measurements, score frequencies.
 - Decide what is worth keeping. Every assertion is recorded; selection happens downstream and is logged there.
 - Reconcile claims across sources. One claims file per source.

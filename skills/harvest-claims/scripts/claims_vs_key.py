@@ -103,6 +103,12 @@ def main() -> int:
                 for cid in p["claims"]:
                     if cid not in claims:
                         unsupported.append((sid, f"references unknown claim {cid}"))
+                    elif isinstance(s["value"], list) and claims[cid].get("value_num"):
+                        lo, hi = s["value"]; vn = claims[cid]["value_num"]
+                        clo = vn[0] if vn[0] is not None else lo
+                        chi = vn[1] if vn[1] is not None else hi
+                        if clo < lo or chi > hi:
+                            unsupported.append((sid, f"range {s['value']} does not cover claim {cid} ({claims[cid]['value']})"))
                 continue
             if s["taxon"] in taxa and taxa[s["taxon"]].get("children"):
                 leaves = leaves_under(s["taxon"], taxa)

@@ -1,0 +1,17 @@
+{
+  "_comment": "The one fixed mapping from a claim's qualifier to a statement frequency. Frequencies are weak priors: anything above 0 keeps the taxon reachable, 0 excludes it. No voting between sources, no per-run judgment; change the numbers here if you want different priors, once, for every key.",
+  "always": 1.0,
+  "usually": 0.9,
+  "sometimes": 0.4,
+  "rarely": 0.1,
+  "range": 1.0,
+  "comparative": 1.0,
+  "unspecified": 1.0,
+  "_secondary": {
+    "_comment": "When one claim admits several values ('brown or grey', 'usually white, rarely grey'), the stated value gets the qualifier's frequency and the alternative gets this one, unless the alternative carries its own qualifier word.",
+    "usually": 0.3,
+    "sometimes": 0.6,
+    "rarely": 1.0,
+    "or": 1.0
+  }
+}

@@ -66,7 +66,8 @@ for path in a.keys:
 
     grp = collections.defaultdict(dict)
     for s in d["statements"]:
-        grp[s["taxon"]].setdefault(s["character"], {})[s["value"]] = s["frequency"]
+        v = tuple(s["value"]) if isinstance(s["value"], list) else s["value"]
+        grp[s["taxon"]].setdefault(s["character"], {})[v] = s["frequency"]
     def eff(t):                       # inherit downward; no overriding in Clavis
         ch, x = [], t
         while x: ch.append(x); x = par[x]
@@ -89,7 +90,7 @@ for path in a.keys:
     for l in kept_leaves:
         for c, g in eff_of[l].items():
             pos = frozenset(k for k, v in g.items() if v > 0)
-            if pos: asserted[c][l] = frozenset(state_label[x] for x in pos)
+            if pos: asserted[c][l] = frozenset(state_label.get(x, x) for x in pos)
     dead = set()
     for c in d["characters"]:
         aa = asserted.get(c["id"], {})
@@ -117,7 +118,7 @@ for path in a.keys:
             for v, f in g.items():
                 out["statements"].append({"id": "statement:" + uuid.uuid4().hex,
                                           "taxon": tid, "character": idmap[c],
-                                          "value": idmap[v], "frequency": f})
+                                          "value": list(v) if isinstance(v, tuple) else idmap[v], "frequency": f})
     report.append((src, len(kept_leaves), len(d["characters"]) - len(dead), len(dead), dropped))
 
 out["taxa"] = [by_species[n] for n in sorted(by_species)]

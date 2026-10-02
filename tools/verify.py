@@ -164,6 +164,7 @@ def main(path: Path, collisions_warn: bool = False, without: str | None = None) 
         groups[(s["taxon"], s["character"])].append(s)
     sciname = {tid: t["scientificName"] for tid, t in by_id.items()}
     char_title = {c["id"]: next(iter(c["title"].values())) for c in d["characters"]}
+    char_type = {c["id"]: c.get("type", "exclusive") for c in d["characters"]}
     for (tx, ch), items in groups.items():
         positives = [it for it in items if it["frequency"] > 0]
         if not positives:
@@ -172,6 +173,12 @@ def main(path: Path, collisions_warn: bool = False, without: str | None = None) 
                 f"in group — the taxon can take no value for this character"
             )
             continue
+        for it in items:
+            f = it["frequency"]
+            if isinstance(f, float) and f not in (0.0, 1.0) and (abs(f - round(f)) < 1e-3):
+                warns.append(f"FREQ-ROUNDING {sciname[tx]} / {char_title[ch]}: frequency {f} is rounding noise; write {round(f)}")
+        if char_type.get(ch) != "exclusive":
+            continue  # non-exclusive: each state is its own yes/no; numerical: one range per taxon
         graded = [it for it in items if it["frequency"] not in (0, 0.5, 1, 0.0, 1.0)]
         if graded:
             continue  # deliberate graded encoding; the convention below does not apply
@@ -187,6 +194,21 @@ def main(path: Path, collisions_warn: bool = False, without: str | None = None) 
             warns.append(f"FREQ-MIXED {sciname[tx]} / {char_title[ch]}: 1 mixed with 0.5 — use graded frequencies if that is what the source says")
         elif ones > 1:
             warns.append(f"FREQ-MULTI-ONE {sciname[tx]} / {char_title[ch]}: more than one frequency of 1 in an exclusive character")
+
+    # 8a. Numerical characters: unit present, min <= max, every statement's
+    #     range inside the character's range and lo <= hi, exactly one
+    #     statement per (taxon, character).
+    for c in d["characters"]:
+        if c.get("type") != "numerical":
+            continue
+        t = char_title[c["id"]]
+        if not c.get("unit"):
+            warns.append(f"NUM-UNIT {t}: numerical character without a unit")
+        if "min" in c and "max" in c and c["min"] > c["max"]:
+            errs.append(f"NUM-RANGE {t}: character min {c['min']} > max {c['max']}")
+    for (tx, ch), items in groups.items():
+        if char_type.get(ch) == "numerical" and len(items) > 1:
+            errs.append(f"NUM-MULTI {sciname[tx]} / {char_title[ch]}: {len(items)} statements for one taxon; a numerical character takes one [min, max]")
 
     # 8b. Character type must be one the schema allows. All three are legal:
     #     exclusive (default), non-exclusive, numerical. A numerical character

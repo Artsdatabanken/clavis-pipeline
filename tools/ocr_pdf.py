@@ -18,6 +18,7 @@ Usage:
 """
 
 import argparse
+import json
 import os
 import sys
 from pathlib import Path
@@ -139,6 +140,38 @@ def make_page_pdf(jpg_path: Path, lines, out_path: Path):
     c.save()
 
 
+def write_layout(page_pdfs, out_path: Path):
+    """Surya layout detection on every page image: figures, pictures and tables
+    with bounding boxes in page-pixel coordinates. Page numbers are 1-based in
+    url order (the order of the merged PDF)."""
+    try:
+        from surya.layout import LayoutPredictor
+        from surya.foundation import FoundationPredictor
+    except ImportError as e:
+        print(f"layout skipped: {e}")
+        return
+    try:
+        predictor = LayoutPredictor(FoundationPredictor())
+    except TypeError:
+        predictor = LayoutPredictor()
+    out = []
+    wanted = {"figure", "picture", "table", "image", "plate"}
+    for i, (sid, jpg, _) in enumerate(page_pdfs, 1):
+        try:
+            img = Image.open(jpg).convert("RGB")
+            res = predictor([img])[0]
+            regions = []
+            for b in getattr(res, "bboxes", []):
+                label = str(getattr(b, "label", "")).lower()
+                if label in wanted:
+                    regions.append({"label": label, "bbox": [float(x) for x in b.bbox]})
+            out.append({"page": i, "id": sid, "width": img.width, "height": img.height, "regions": regions})
+        except Exception as e:
+            print(f"  layout {sid}: {e}")
+    out_path.write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(f"layout: {sum(len(p['regions']) for p in out)} figure/table regions on {len(out)} pages -> {out_path}")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("urls", nargs="?", default="urls.txt")
@@ -157,6 +190,10 @@ def main():
                     help="Surya recognition batch size (lines/step; lower if OOM)")
     ap.add_argument("--det-bs", type=int, default=4,
                     help="Surya detection batch size (images/step; lower if OOM)")
+    ap.add_argument("--layout", action="store_true",
+                    help="also run Surya layout detection and write layout.json next to "
+                         "--out: per page the Figure/Picture/Table regions with bounding "
+                         "boxes, for harvest-claims/scripts/find_figures.py")
     args = ap.parse_args()
 
     urls_file = Path(args.urls)
@@ -231,6 +268,9 @@ def main():
                   f"({dt/len(chunk):.2f}s/page)")
     else:
         print("Nothing to OCR.")
+
+    if args.layout:
+        write_layout(page_pdfs, Path(args.out).with_name("layout.json"))
 
     if args.no_merge:
         return

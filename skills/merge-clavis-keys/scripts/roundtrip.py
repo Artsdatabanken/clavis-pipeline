@@ -1,121 +1,151 @@
 #!/usr/bin/env python3
 """Zero-loss check: replay every source key's positive claims against the
-merged key. Every claim must be SURVIVED (some value it asserts still has
-frequency > 0), NARROWED (a more precise source cut it down), or DELIBERATELY
-REMOVED (named in removed.json). Anything else is a silent loss and a defect.
-
-Staleness was the recurring bug on the rodent key -- the checker carried its
-own copies of the concordance and rename maps and drifted from the merge three
-times, twice reporting false losses and once silently skipping renamed items
-while appearing to pass. So this reads THE SAME FILES the merge used. Never
-hand-copy a mapping in here; if a later step renames anything, it writes a
-rename file and you pass it with --rename.
+merged key. Reads THE SAME files the merge used (spec.json, the rename chain,
+removed.json); never a hand-copied mapping.
 
 Usage:
-  roundtrip.py --merged KEY.json --csv species.csv \
-               --concordance concordance.json --statemap statemap.json \
-               [--rename coarsening.json ...] [--removed removed.json] \
+  roundtrip.py --merged KEY.json --spec spec.json --csv species.csv [--alias alias.json]
+               [--rename R1.json --rename R2.json ...] [--removed removed.json] [--report out.md]
                SOURCE1.json SOURCE2.json ...
+
+Claim = (source, species, source character, canonical axis). Outcomes:
+  survived   exclusive: some asserted value still has frequency > 0;
+             non-exclusive: EVERY asserted state still > 0;
+             numerical: the merged range contains the source range
+  narrowed   survived, but not every asserted value is still reachable
+             (a more precise source cut it); counted inside survived
+  removed    the canonical character, or this species' statements on it, are
+             listed in removed.json (deliberate); format either a list of
+             titles or {title: {"species": "all" | [names]}}
+  LOST       anything else, including a source character absent from spec
+             and a label that maps to nothing on every axis (UNREPRESENTED)
+Renames ({"Canonical": {"old label": "new label"}, "__characters__": {"old
+title": "new title"}}) are chained in the order given. Exit 1 on any loss.
 """
-import argparse, csv, json, collections, sys, os
+import argparse, collections, csv, json, os, sys
 
 ap = argparse.ArgumentParser()
 ap.add_argument("sources", nargs="+")
-ap.add_argument("--merged", required=True)
-ap.add_argument("--csv", required=True)
-ap.add_argument("--concordance", required=True)
-ap.add_argument("--statemap", required=True)
-ap.add_argument("--rename", action="append", default=[])
-ap.add_argument("--removed", default=None)
+ap.add_argument("--merged", required=True); ap.add_argument("--spec", required=True)
+ap.add_argument("--csv", required=True); ap.add_argument("--alias")
+ap.add_argument("--rename", action="append", default=[]); ap.add_argument("--removed")
+ap.add_argument("--report")
 a = ap.parse_args()
 
-C = json.load(open(a.concordance, encoding="utf-8"))
-S = json.load(open(a.statemap, encoding="utf-8"))
-REN = {}
-for r in a.rename:                      # {"Canonical char": {"old label": "new label"}}
-    for c, m in json.load(open(r, encoding="utf-8")).items():
-        REN.setdefault(c, {}).update(m)
-REMOVED = set(json.load(open(a.removed, encoding="utf-8"))) if a.removed else set()
-keep = {r["scientificName"].strip() for r in csv.DictReader(open(a.csv, encoding="utf-8-sig"))
-        if r.get("scientificName", "").strip()}
+load = lambda p: json.load(open(p, encoding="utf-8"))
+T = lambda o: next(iter((o.get("title") or {}).values()), "")
+spec = load(a.spec)
+alias = {k: (v[0] if isinstance(v, list) else v) for k, v in load(a.alias).items()} if a.alias else {}
+keep = {r["scientificName"].strip() for r in csv.DictReader(open(a.csv, encoding="utf-8-sig")) if r.get("scientificName", "").strip()}
+removed = {}
+if a.removed:
+    r = load(a.removed)
+    removed = {k: "all" for k in r} if isinstance(r, list) else {k: (v.get("species", "all") if isinstance(v, dict) else "all") for k, v in r.items()}
+def is_removed(canon, sp):
+    v = removed.get(canon); return v is not None and (v == "all" or sp in v)
+chain = [load(p) for p in a.rename]
+def ren(canon, lab):
+    for m in chain: lab = m.get(canon, {}).get(lab, lab)
+    return lab
+def renc(canon):
+    for m in chain: canon = m.get("__characters__", {}).get(canon, canon)
+    return canon
 
-tag2canon = {t: canon for canon, ms in C.items() for t in ms}
+def tree(d):
+    taxa, par = {}, {}
+    def w(ts, p=None):
+        for t in ts: taxa[t["id"]] = t; par[t["id"]] = p; w(t.get("children", []), t["id"])
+    w(d["taxa"]); return taxa, par, [i for i, t in taxa.items() if not t.get("children")]
+def effective(d):
+    taxa, par, leaves = tree(d)
+    g = collections.defaultdict(dict)
+    for s in d["statements"]:
+        v = tuple(s["value"]) if isinstance(s["value"], list) else s["value"]
+        g[s["taxon"]].setdefault(s["character"], {})[v] = s["frequency"]
+    out = {}
+    for l in leaves:
+        ch, x = [], l
+        while x: ch.append(x); x = par[x]
+        o = {}
+        for anc in reversed(ch):
+            for c, gg in g.get(anc, {}).items(): o.setdefault(c, {}).update(gg)
+        out[l] = o
+    return out
 
-m = json.load(open(a.merged, encoding="utf-8"))
-T = lambda o: next(iter(o["title"].values()))
+m = load(a.merged)
+mtaxa, mpar, mleaves = tree(m); mE = effective(m)
 mchar = {T(c): c for c in m["characters"]}
-mlabel = {s["id"]: T(s) for c in m["characters"] for s in (c.get("states") or [])}
-taxa, par = {}, {}
-def walk(ts, p=None):
-    for t in ts: taxa[t["id"]] = t; par[t["id"]] = p; walk(t.get("children", []), t["id"])
-walk(m["taxa"])
-byname = {t["scientificName"]: i for i, t in taxa.items() if not t.get("children")}
-grp = collections.defaultdict(dict)
-for s in m["statements"]:
-    grp[s["taxon"]].setdefault(s["character"], {})[s["value"]] = s["frequency"]
-def eff(t, cid):
-    ch, x = [], t
-    while x: ch.append(x); x = par[x]
-    o = {}
-    for anc in reversed(ch):
-        if cid in grp.get(anc, {}): o.update(grp[anc][cid])
-    return o
+mlab = {s["id"]: T(s) for c in m["characters"] for s in (c.get("states") or [])}
+byname = {mtaxa[l]["scientificName"]: l for l in mleaves}
+feeds = collections.defaultdict(list)
+for canon, v in spec.items():
+    for s, mm in v.get("members", {}).items():
+        for t in mm: feeds[(s, t)].append(canon)
 
 rows, losses = [], []
 for path in a.sources:
     src = os.path.basename(path).split(".")[0]
-    d = json.load(open(path, encoding="utf-8"))
-    lg = lambda o: (o.get("title") or {}).get((d.get("language") or ["nb"])[0]) \
-                   or next(iter((o.get("title") or {}).values()), "")
-    st, pr = {}, {}
-    def w2(ts, p=None):
-        for t in ts: st[t["id"]] = t; pr[t["id"]] = p; w2(t.get("children", []), t["id"])
-    w2(d["taxa"])
-    ct = {c["id"]: lg(c) for c in d["characters"]}
-    sl = {s["id"]: lg(s) for c in d["characters"] for s in (c.get("states") or [])}
-    g2 = collections.defaultdict(dict)
-    for s in d["statements"]:
-        g2[s["taxon"]].setdefault(s["character"], {})[s["value"]] = s["frequency"]
-    def eff2(t):
-        ch, x = [], t
-        while x: ch.append(x); x = par2(x)
-        o = {}
-        for anc in reversed(ch):
-            for c, gg in g2.get(anc, {}).items(): o.setdefault(c, {}).update(gg)
-        return o
-    par2 = lambda x: pr[x]
-    ok = nar = lost = skip = 0
-    for leaf in [i for i, t in st.items() if not t.get("children")]:
-        name = st[leaf]["scientificName"]
-        if name not in keep or name not in byname: skip += 1; continue
-        for cid, gg in eff2(leaf).items():
-            pos = {sl[k] for k, v in gg.items() if v > 0}
+    d = load(path)
+    taxa, par, leaves = tree(d); E = effective(d)
+    ct = {c["id"]: T(c) for c in d["characters"]}
+    sl = {s["id"]: T(s) for c in d["characters"] for s in (c.get("states") or [])}
+    n = collections.Counter()
+    for leaf in leaves:
+        name = alias.get(taxa[leaf]["scientificName"], taxa[leaf]["scientificName"])
+        if name not in keep: n["out_of_scope"] += 1; continue
+        if name not in byname: n["LOST"] += 1; losses.append((src, name, "*", "species missing from merged key")); continue
+        for cid, g in E[leaf].items():
+            pos = [(k, v) for k, v in g.items() if v > 0]
             if not pos: continue
-            canon = tag2canon.get(f"{ct[cid]} [{src}]") or tag2canon.get(ct[cid])
-            if canon is None:
-                if ct[cid] in REMOVED: continue
-                skip += 1; continue
-            if canon in REMOVED: continue
-            cands = set()
-            for p in pos:
-                t2 = S.get(canon, {}).get(p, [p])
-                cands.update([t2] if isinstance(t2, str) else t2)
-            cands = {REN.get(canon, {}).get(x, x) for x in cands}
-            mc = mchar.get(canon)
-            if mc is None: lost += 1; losses.append((src, name, canon, sorted(cands), "character gone")); continue
-            e = eff(byname[name], mc["id"])
-            reachable = {mlabel[k] for k, v in e.items() if v > 0}
-            if cands & reachable:
-                ok += 1
-                if not cands <= reachable: nar += 1
-            else:
-                lost += 1
-                losses.append((src, name, canon, sorted(cands), f"all on 0; merged has {sorted(reachable)}"))
-    rows.append((src, ok, nar, lost, skip))
+            title = ct[cid]
+            if (src, title) not in feeds:
+                n["LOST"] += 1; losses.append((src, name, title, "source character not in spec")); continue
+            said = False
+            for canon in feeds[(src, title)]:
+                v = spec[canon]
+                mc = mchar.get(renc(canon))
+                if v["type"] == "numerical":
+                    said = True
+                    if is_removed(canon, name): n["removed"] += 1; continue
+                    if mc is None: n["LOST"] += 1; losses.append((src, name, canon, "character gone, not in removed.json")); continue
+                    e = mE[byname[name]].get(mc["id"], {})
+                    rng = [k for k in e if isinstance(k, tuple)]
+                    src_r = [k for k, _ in pos if isinstance(k, tuple)]
+                    if not rng or not src_r: n["LOST"] += 1; losses.append((src, name, canon, "no range in merged key")); continue
+                    lo, hi = min(r[0] for r in rng), max(r[1] for r in rng)
+                    slo, shi = min(r[0] for r in src_r), max(r[1] for r in src_r)
+                    if lo <= slo and shi <= hi: n["survived"] += 1
+                    else: n["LOST"] += 1; losses.append((src, name, canon, f"source range [{slo}, {shi}] not inside merged [{lo}, {hi}]"))
+                    continue
+                mp = v["members"][src][title]
+                per_label = {sl.get(k, k): mp.get(sl.get(k, k), []) for k, _ in pos}
+                per_label = {k: t for k, t in per_label.items() if t}
+                if not per_label: continue
+                said = True
+                if is_removed(canon, name): n["removed"] += 1; continue
+                if mc is None: n["LOST"] += 1; losses.append((src, name, canon, "character gone, not in removed.json")); continue
+                e = mE[byname[name]].get(mc["id"], {})
+                reach = {mlab[k] for k, f in e.items() if f > 0 and k in mlab}
+                need = {ren(canon, t) for tg in per_label.values() for t in tg}
+                if v["type"] == "non-exclusive":
+                    if need <= reach: n["survived"] += 1
+                    else: n["LOST"] += 1; losses.append((src, name, canon, f"states {sorted(need - reach)} gone; merged has {sorted(reach)}"))
+                else:
+                    if need & reach:
+                        n["survived"] += 1
+                        if not need <= reach: n["narrowed"] += 1
+                    else: n["LOST"] += 1; losses.append((src, name, canon, f"asserted {sorted(need)}; merged has {sorted(reach)}"))
+            if not said:
+                n["LOST"] += 1; losses.append((src, name, title, f"UNREPRESENTED: {[sl.get(k, k) for k, _ in pos]} map to nothing on any axis"))
+    rows.append((src, n))
 
-print(f"{'source':<28}{'survived':>9}{'narrowed':>10}{'LOST':>6}{'skipped':>9}")
-for r in rows: print(f"{r[0]:<28}{r[1]:>9}{r[2]:>10}{r[3]:>6}{r[4]:>9}")
-tot = [sum(r[i] for r in rows) for i in (1, 2, 3, 4)]
-print(f"\nSUM survived {tot[0]} | narrowed {tot[1]} | LOST {tot[2]} | skipped {tot[3]}")
-for l in losses[:30]: print("  LOSS", l)
-sys.exit(1 if tot[2] else 0)
+out = [f"{'source':<14}{'survived':>9}{'(narrowed)':>11}{'removed':>9}{'LOST':>6}  out of scope"]
+tot = collections.Counter()
+for src, n in rows:
+    out.append(f"{src:<14}{n['survived']:>9}{n['narrowed']:>11}{n['removed']:>9}{n['LOST']:>6}  {n['out_of_scope']}"); tot.update(n)
+out.append(f"{'SUM':<14}{tot['survived']:>9}{tot['narrowed']:>11}{tot['removed']:>9}{tot['LOST']:>6}  {tot['out_of_scope']}")
+for l in losses: out.append("  LOSS " + " | ".join(map(str, l)))
+print("\n".join(out))
+if a.report:
+    open(a.report, "w", encoding="utf-8").write("```\n" + "\n".join(out) + "\n```\n")
+sys.exit(1 if tot["LOST"] else 0)

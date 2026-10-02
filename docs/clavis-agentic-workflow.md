@@ -54,11 +54,13 @@ Whatever the form, the goal of this stage is the same: get each source's relevan
 ## 5. The pipeline at a glance
 
 1. Decide the scope: which species should the key cover?
-2. Prepare each source: download, scan, OCR, scrape, or convert as needed, and cut out the relevant section.
-3. Digitize: one independent agent per source turns that source into a draft Clavis key.
-4. Audit: a fresh agent checks each draft against its source and fixes what it finds.
-5. Merge: all audited keys are combined into one.
-6. Verify and deliver.
+2. Prepare each source once: text, each species' pages, the figures.
+3. Harvest: one agent per species per source lists every claim the source makes, with a quote and a page.
+4. Digitize: one agent per source designs the key's questions from the claims; a program scores the answers.
+5. Audit: a fresh agent checks each draft against the claims and fixes what it finds.
+6. Merge: all audited keys are combined into one.
+7. Determinability: a fresh agent makes every answer something a person can pick with one specimen in hand.
+8. Gates: a program measures the result; the run is finished only when every gate passes, and the cost is reported.
 
 The following sections describe what actually happens in each step.
 
@@ -70,110 +72,99 @@ This list is also the anchor for names. Scientific names change over time, and b
 
 ## 7. Step 2 - Prepare each source
 
-Each source is reduced once, up front, to exactly the section that matters: the pages covering the target group, extracted to a plain text file with a note recording the printed page offsets. The section boundaries are verified by reading the first and last pages of the candidate range, because stated page ranges are often slightly off, and text that looks relevant by keyword can turn out to be an index or glossary. If a species description spills onto a page outside the nominal range, the extraction is extended to include it.
+Each source is reduced once, up front, by programs rather than by an agent reading the book:
 
-This preparation serves accuracy and economy at once: the digitizing agent reads fourteen relevant pages instead of hunting through a three-hundred-page book, and the same extracted file later serves its auditor.
+- The text layer is extracted once (`pdftotext`; a scanned book is OCR'd first, and the OCR step also records where the figures are on each page).
+- The species list, extended with vernacular names from the register, is searched in the text. The pages where each species is treated, the page range of the whole section and the offset between printed and PDF page numbers come out of that search. A person confirms only the first and last page of the section.
+- Every figure, plate and table in the section is listed with its page and, where known, its position on the page, and cut out as a small image.
 
-## 8. Step 3 - Digitize: one agent per source
+The result is one small text file per species and a folder of figure crops. Nobody downstream reads the whole book, or whole page images, by default. This is where most of the cost of the earlier runs went: a 300-page book re-read by ten agents.
 
-The digitizing agent reads its entire section - every page, not just the printed key - and rebuilds the information as a Clavis key. The core of the work is a translation from prose to structure, and it follows explicit rules.
+## 8. Step 3 - Harvest: one agent per species per source
 
-### Splitting sentences into single-trait characters
+A harvester gets one species' pages from one source, and its figure crops, and nothing else. It writes one line per claim the source makes about that species: the trait ("tail length relative to body"), the value as the source gives it ("over 2/3 of body length", "3–6 g"), how often the source says it holds (always, usually, rarely), the verbatim quote, and the printed page. Bundled sentences become several claims. Figure labels become claims. Traits that cannot be observed on a specimen (litter size, lifespan) are recorded too, marked as such, so that later steps can prove they were seen and deliberately left out.
 
-Book prose bundles traits. A step in a printed plant key that reads "stem hairy, leaves toothed, flowers yellow" makes three observations about three different parts of the plant, and becomes three characters, each with its own states. Splitting matters because a user may be able to answer one of the three and not the others; bundled into one question, the answer would be unusable for them. The agent keeps a running list of characters as it reads, and when the same trait comes up again later in the source - even deep in another part of the key - it is attached to the existing character rather than duplicated.
+A program then checks every line, parses the numbers and units ("3–6 g" becomes the range 3 to 6, unit grams), fills in the frequency word from the quote where the harvester left it open, removes duplicates and gives each claim a stable identifier. The harvester never designs anything and never judges what matters. That is the point: a list of what the book says, line by line, with a page number on each, is hard to argue with and easy to check against the page.
 
-### Making the states a clean partition
+## 9. Step 4 - Digitize: one agent per source, from the claims
 
-The states of a character are the menu the user picks from, and they must form what mathematicians call a partition: every value the source claims must fall into exactly one state - never two, never none. The agent tests this in both directions, for every character, and records the result in a checklist table before the key file is generated.
+The digitizing agent does not read the book. It reads the claims file, groups the claims by trait, and decides for each trait: does it become a question in the key, or is it skipped, and why? Every claim ends up in exactly one of those two places, and the program at the end proves it.
 
-Test one, no overlap: for every pair of states, is there any value that would satisfy both? A leg-count character with states "Six," "Eight or fewer," and "Many" fails, because an animal with six legs fits two states at once; the fix is to re-cut the states into "Six," "Seven to eight," "Nine or more." A color character with states "Brown," "Brown or gray," and "Black" also fails, because "Brown or gray" bundles two things an observer can tell apart; the fix is to split it, and to score any species the book calls variable across both resulting states.
+For each question the agent writes a design, not the answers:
 
-Test two, no gap: for every claim in the source, does some state cover it? Suppose one plant species is described as having "5 or fewer stamens" and the others "exactly 8" or "exactly 10," and the drafted states are Four, Five, Eight, Ten. That fails: "5 or fewer" includes 3, 2, 1, and 0, and none of those values has a state. A user counting three stamens would have no answer to give, making that species unreachable for them. The fix is to add a state "Fewer than four" and score the bounded species across every state its claim spans.
+### Single-trait questions with answerable states
 
-Crucially, these tests are run against what the source asserts, interpreted only with ordinary language and arithmetic ("5 or fewer" includes 4, 3, 2, 1, 0). The agent is forbidden to use biological knowledge about what is "realistic" to shrink the space, because that is exactly how coverage gaps get papered over.
+A question is about one observable trait. Its possible answers, the states, must be a clean partition of everything the source asserts: every asserted value falls into exactly one state, never two, never none. "Brown or grey" is never a state; it is two statements. The states must also be answerable by one person with one specimen and the guide, without another specimen to compare against and without experience: "darker than the field vole" is not an answer a user can give; "grey-brown" is.
 
-### Binning measurements
+### Measurements stay numbers
 
-A character about a measurable quantity - a length, a weight, a count on a sliding scale - carries explicit numbers with units in its state labels: "under 40 mm / 40–60 mm / over 60 mm," not "small / medium / large," because two readers will disagree about where medium ends. This is a requirement wherever the source gives numbers to anchor with. When the source itself offers nothing better than relative wording, the information is still kept rather than thrown away - discarding it could cost the only thing separating two species - but the vagueness is flagged in the decisions document as a weak point for a better source to fix. Choosing the cut points is a judgment call: the agent places them where they best separate species, and documents the choice. When a species' true range crosses a cut point - the source gives a length of 35–45 mm and the boundary sits at 40 - the species is scored on both bins with paired frequencies, so a user measuring either side of the boundary still finds it.
+A trait the source gives numbers for - a length, a weight, a count on a scale, a ratio - becomes a numerical question. Each species gets its range, the union of what the source says for it, with a unit. There are no bins and no cut points to choose: the viewer compares the user's measurement with the ranges. Earlier versions of this pipeline binned measurements ("under 40 mm / 40–60 mm / over 60 mm") and spent much effort choosing and auditing cut points; a format that stores ranges needs none of that.
 
-### Scoring, inheritance, and honest uncertainty
+### Frequencies are weak priors
 
-For each species and each character, the agent writes the frequencies. The default shape is confident: one state at 1, the rest at 0. When the source admits more than one value - "usually brown, occasionally gray," "brown or gray," or a range crossing a bin boundary - the admitted states share the probability instead. Graded wording is kept graded: if the source says roughly one individual in twenty shows a trait, the encoding is 0.05, not a rounded 0.5, because the number carries information a user can exploit.
+For each claim, a program writes the statement in the key and the number that says how often the species shows that value. The number comes from one fixed table: always 1, usually 0.9, sometimes 0.4, rarely 0.1. Its only hard meaning is that zero excludes a species and anything above zero keeps it reachable. A rare form must still lead to the right species, and a 0.1 is enough for that; nothing in the pipeline argues about 0.8 versus 0.7, and sources are never made to vote on a number. Where a species shows exactly one of several states, nothing is written for the others: zero is implied, which keeps the files small.
 
-Before writing any statement, the agent asks whether the trait holds for every species of some larger group; if so, the statement goes on the group instead (this is called hoisting). One exception among the members means no hoisting - the trait is then scored member by member.
+### Provenance
 
-### Mining the descriptions
-
-The printed key in a book typically uses a handful of traits, but the species descriptions around it mention many more: sizes, colors, habits, sounds, habitats, tracks. The agent walks these and applies a fixed decision rule for each trait it finds: add it as a character if at least two species mention it with different values (then it can actually separate species); skip it if only one species mentions it, or if every species that mentions it has the same value (then it separates nothing). Skipped traits are listed in the decisions document, so an expert can see the omissions were deliberate rather than oversights.
-
-Two special cases have their own rules. Traits that cannot be observed on the specimen or find in front of you - how many offspring the species has per year, how long its development takes, how old it gets - do not become characters, because answering them requires already knowing the species. Geographic occurrence ("found in Norway: yes/no") may become a character, because it is genuinely useful, but the workflow tries hard not to let it be the only thing separating two species, since a user outside the assumed region cannot answer it. The audit later re-checks separability with the geography question removed; where a pair then becomes inseparable, the sources are searched for another separating trait, and if none exists the geography character is kept for that pair and the dependence is documented: those two species are separable only inside the region. That is a stated limitation of the sources, not something the workflow can conjure away.
-
-### Ordering and labeling
-
-The characters are ordered by how much access to the specimen each question requires: features visible at a glance first, then measurements, then habitat and behavior, then details that need the specimen in hand, and internal or microscopic features last. Labels follow fixed conventions - one measurement unit throughout the key, ratios always in percent, digits rather than number words, one capitalization style - so the finished key reads as one work rather than a patchwork.
+Every statement in the key records the claims it rests on, and every claim the agent decided to skip is listed with its reason. These two lists are what the audit and the final gate measure: every statement traces to a quoted passage, and every passage reached the key or was deliberately left out.
 
 ### What the digitizing agent hands over
 
-Rather than producing the key file directly, the agent writes a small generator program containing the species tree, the characters and states, and the scoring table; running the program produces the key file. This makes the work reproducible and cheap to fix: a corrected boundary is one edit in the generator, not a hunt through thousands of lines. Alongside the key, the agent delivers the decisions document (every judgment call, with reasons, written in the language of the source so its expert community can review it), the partition-test checklist, and a coverage note listing which species from the project list the source covers and which it lacks.
+The design file, the scored key produced by the program, the provenance and skipped lists, and a decisions document in the language of the source: which trait wordings were folded into one question, which comparatives were rewritten into absolute terms or dropped, where the source contradicts itself and which reading was trusted. Species are a flat list; the family tree comes later, from the register.
 
-## 9. Step 4 - Audit: fresh eyes on every draft
+## 10. Step 5 - Audit: fresh eyes on every draft
 
-Every draft is audited before it may enter the merge - by a different agent that has not seen the digitizing work and has nothing to defend. The audit runs in five phases, in order.
+Every draft is audited before it may enter the merge - by a different agent that has not seen the digitizing work and has nothing to defend. The audit works from the claims and their quotes, not from the book.
 
-Phase 1 is a deterministic verification program. It checks, mechanically: the file parses; every statement points to a species, character, and state that actually exist; no state is used with the wrong character; every frequency lies between 0 and 1; every answered species-character combination leaves at least one state reachable; no character is stated both on a group and on one of its members; and no two species have ended up with identical answers to every question. That last flag usually means an encoding mistake, for example a trait hoisted onto a group when the two species actually differ in it. But if the source genuinely offers no way to separate the pair, that is a legitimate limitation of the source, recorded as such rather than papered over.
+First the programs: the structural verifier (the file parses; every statement points to a species, question and answer that exist; frequencies lie between 0 and 1; a species' range lies inside the question's range; no question is stated both on a group and on one of its members; no two species end up with identical answers to everything); the claims audit in both directions; the range check; and the coverage test, which lists every claim whose wording does not match the state it was mapped to, so that the auditor looks only at the mappings that needed judgment.
 
-Phase 1b runs cheap convention checks: a program parses every numeric state label and reports gaps and overlaps between bins ("20–50 mm" followed by "over 100 mm" strands every value in between); labels are scanned for mixed units and inconsistent notation; and the auditor lists non-committal scores - species given a nonzero frequency on every state of a character. Such a score is a real score and can be correct (the species genuinely spans all values), but that question can then never rule the species out, so the listing is a diagnostic: it separates the healthy case, where a question that cannot exclude one species still narrows down the others, from the suspect one, where a character is non-committal for most species and probably cannot really be answered at all, making it a candidate for removal.
+Then the judgment, on the flagged rows only: do sibling states overlap; is a measurement hiding as a set of bins; is a state a fair reading of its quote ("small round ears" scored as "ears clearly protruding" is not); can a user pick each state with one specimen in hand. Then the fixes, applied through the design so the program reproduces the key, and the programs again, until every count is zero. The corrected key is saved as a new version alongside the original - nothing is overwritten - together with a findings document.
 
-Phase 2 redoes the two partition tests from scratch, for every pair of states in every character. Beyond the overlap types described earlier, the auditor looks specifically for a subtle third kind: states from different trait axes mixed into one character - "green" sitting next to "with two prominent spots" as answers to the same question. A specimen can be both at once, so the user cannot pick one answer; the fix is to split the character itself into a color character and a pattern character, redistributing every score.
-
-Phase 3 checks that every character about a measurable quantity has numeric ranges on all its states, and asks whether the numbers would be better stored as actual measurements than as bins where the format allows it.
-
-Phase 4 is the source-coverage spot check: the auditor picks a sample of species, re-reads their descriptions in the source sentence by sentence, looks at the figures with vision, and verifies that each observable feature the source mentions is captured somewhere in the key. Anything missing is either added (if it passes the two-species-different-values rule) or logged as deliberately skipped. This phase also re-runs the separability check with the geographic-occurrence character removed, to prove no species pair depends on geography alone.
-
-Phase 5 applies all fixes and re-runs Phase 1 until it passes. The corrected key is saved as a new version alongside the original - nothing is overwritten - together with an audit-findings document listing what was found and what was done about it.
-
-## 10. Step 5 - Merge: many keys become one
+## 11. Step 6 - Merge: many keys become one
 
 The audited keys, one per source, are now combined. The merge is a sequence of defined operations, each producing an intermediate file and a short report, so any stage can be redone.
 
 ### Union first
 
-All keys are stacked into one big union: every source's species, characters, and statements, side by side, with each item tagged by its source. Nothing is reconciled yet. The reason for this ordering is fairness: a union has no order, so no source counts more than another. Merging keys one at a time would quietly weight the last source heaviest.
+All keys are stacked into one big union: every source's species, questions, and statements, side by side, with each item tagged by its source. Nothing is reconciled yet. The reason for this ordering is fairness: a union has no order, so no source counts more than another. Merging keys one at a time would quietly weight the last source heaviest.
 
-Any source that encoded a printed key's steps verbatim - states that are whole multi-clause sentences - is first decomposed into single-trait characters, exactly as the digitizing rules require, because a bundled sentence cannot be matched against a clean trait.
+### Matching species and questions
 
-### Matching species and characters
+Species are matched by their resolved accepted names: same accepted name, same species.
 
-Species are matched by their resolved accepted names from Step 1: same accepted name, same species. Each species now simply carries all its sources' scores next to each other.
+Questions are matched by a concordance: which questions from different sources describe the same observable trait. A program proposes candidate pairs (similar titles, a glossary of known synonyms across languages, shared answer labels, overlapping measurement ranges), and the agent decides by meaning - what would the user actually look at? - and writes one specification file: for each merged question its type, its answer labels, and for every source question that feeds it how each source label maps onto the merged labels. The maps are kept per source question, because "yes" means different things in different questions.
 
-Characters are matched by building a concordance: a table saying which characters from different sources describe the same observable trait. The matching criterion is meaning - what would the user actually look at? - decided by reading the character titles and states. Statistical agreement of the underlying data (do the sources score the species the same way?) is used only as supporting evidence when the meaning is uncertain, never as the trigger, because with few species, two completely unrelated traits can agree perfectly by chance. Measurement bins are matched by computing the numeric overlap of the parsed ranges, never by eye, because hand-copied boundaries are where transcription errors hide.
+### Reconciling the answers
 
-### Reconciling the scores
+For each merged question, species by species, the sources' claims are combined by a program:
 
-For each merged character, every source's states are mapped onto one agreed set of states, and then, species by species, the sources' claims are combined:
+- Measurements: the merged range is the union of the sources' ranges, lowest minimum to highest maximum. Nothing is averaged and nothing is voted on.
+- Single-choice questions: if the sources' sets of allowed answers overlap, the overlap is the answer - the most precise source wins, the vague one is narrowed, not lost. If they do not overlap at all, that is first treated as a symptom: most apparent conflicts are errors in the mapping file, and those are fixed before anything is called a disagreement. A real disagreement keeps every asserted value reachable; the number attached to each is the highest any source gave it.
+- Multiple-choice questions (habitats, signs): every asserted answer is kept with its own number; nothing is intersected.
 
-- If the sources' claims overlap, the answer is the intersection - the most precise claim wins. One source gives a measurement, "45–60 mm"; another only says "long": the measurement stands, and the vague claim is recorded as narrowed, not lost.
-- If the claims do not overlap at all, that is first treated as a symptom, not a finding. Most apparent conflicts turn out to be errors in the merge's own mapping tables, such as two of a source's states accidentally swapped during reconciliation, so the mapping is re-examined before the sources are declared to disagree. Only a conflict that survives this scrutiny counts as real disagreement.
-- A real disagreement is preserved, not voted away. Each source gets one vote, split evenly across the values it allows, and the frequencies are the normalized sums - so every value any source asserts remains reachable, weighted by how many sources back it. Majority rule is deliberately not used: dropping the minority claim would silently destroy source information, and the round-trip check at the end would catch exactly that.
-- When two states are merged into one, a species' frequencies on them are added (the states were mutually exclusive alternatives), then rescaled if the total exceeds 1. Graded values are carried through untouched.
+### Hierarchy, location and determinability
 
-### Hierarchy and cleanup
+The family-tree structure of the merged key comes from the national register, never from the sources (which disagree about classification), and its depth is decided by a counting rule rather than taste: with 16 or fewer species, a flat list; above that, the deepest rank at which every species has an ancestor and which yields between 2 and half-the-species-count groups. Traits that every species under a node shares are moved up to that node by a program that aborts unless every species' effective answers are unchanged. Vernacular names come from the register.
 
-The family-tree structure of the merged key comes from the national register, never from the sources (which disagree about classification), and its depth is decided by a counting rule rather than taste: with 16 or fewer species, a flat list under the root is used; above that, a rank (family, genus, and so on) qualifies if every species has an ancestor at that rank and it yields between 2 and half-the-species-count groups, and the deepest qualifying rank is kept. For example, 29 species falling into 6 families but 18 genera get grouped by family: 18 groups for 29 species would fragment the list rather than organize it. Vernacular names are fetched from the register by ID; missing ones stay empty rather than being invented.
+Location questions ("occurs in Norway") are a last resort: a program measures, for each species pair, whether the pair would lose its last separating question, or drop below three, without them; the location question is kept only for the species that need it, stripped from the others, and dropped entirely when no pair needs it. Every removal is logged so the round-trip can account for it.
 
-Cleanup then applies the field-usability tests from digitization to the union as a whole: characters no user could answer on an encounter are removed, geographic characters are stripped back to the species pairs that genuinely need them, and true duplicates created by the couplet-splitting are folded together. Every removal is logged with its cost.
+Then a fresh agent runs the determinability pass on the merged key: a program flags every answer that compares to something not in front of the user, every bundle, every size word without a number, and every question with more shades than a person can name; the agent decides only the flagged rows. Shades are merged through a measured coarsening: a merge is accepted only if no species pair loses its last separating question, no pair that had three or more drops below three, and the question keeps three quarters of its own separating power. Comparatives are rewritten in absolute terms or removed; bundles are split; any leftover bins become a numerical question.
 
-Finally, the union's vocabulary is coarsened. Stacking all sources yields the finest wording of each - "gray" beside "slate gray," five named shades of brown - which is precise on paper and unanswerable with a specimen in hand. Candidate merges of neighboring states are proposed semantically but accepted or rejected by measurement, against three criteria: no species pair may lose its last separating character; no pair that had three or more independent ways to be separated may drop below three; and the character itself must keep at least three quarters of its own separating power, so the process cannot hollow a question out while overall redundancy hides the damage. Merges are applied greedily, best first, re-measuring after each.
+## 12. Step 7 - The gates, and the cost
 
-## 11. Step 6 - Verify and deliver
+One program runs every gate on the final key and writes one table. The run is finished only when every required gate passes:
 
-The merged key must pass all of the following, in order:
+- The structural verifier, again, on the final file.
+- The range check: every numerical question has a unit and valid ranges.
+- The claims audit per source: zero statements without a claim, zero claims unaccounted for.
+- The round-trip: every positive claim of every source is replayed against the finished key through the same specification and rename files the merge used. Each must come back as survived (some asserted value still reachable; for multiple-choice questions every asserted value; for measurements the merged range contains the source's), narrowed (superseded by a more precise source), or deliberately removed (on the logged list). Zero silent losses; a stale rename chain is the classic false loss, so the checker reads the merge's own files.
+- The redundancy report: for every pair of species, the number of independent questions that separate them (two measurement ranges separate when they do not overlap). Pairs no source separates are documented as limits of the source material.
+- The geography check: no pair separable only by location.
+- Two-way coverage against the species list.
+- Tokens and cost: every model call of the run, orchestrator and agents, summed from the harness's logs and priced, with the wall-clock time.
 
-- The deterministic verification program from the audit, again, on the final file.
-- The bin-continuity check: every numeric answer scale gapless and overlap-free.
-- The round-trip check: every positive claim from every source is replayed against the finished key, through the accumulated mapping tables (name aliases, character concordance, every state rename and coarsening). Each claim must come back as survived (some asserted value still reachable), narrowed (superseded by a more precise source), or deliberately removed (on the documented list). Zero silent losses; if any claim comes back unaccounted for, something upstream is wrong and gets fixed. The mapping tables must be kept current through every late change, because a stale checker either reports false losses or, worse, skips renamed items while appearing to pass.
-- The redundancy report: for every pair of species, the number of independent characters that can separate them. Pairs no source can separate are documented as limitations of the source material, distinguished from anything the merge itself caused.
-- The geography check: every pair separable only by occurrence has been either given another separator or documented as region-bound.
-- Two-way coverage against the species list: which listed species the key misses (and which kind of additional source would fix that), and which species the sources cover beyond the list.
+A failed gate is work, not a result: the cause is fixed where it lives and every gate runs again. The deliverables are the key file and its companion documents - the gate table, the decisions record, the round-trip, redundancy, removed-questions and coverage reports, the cost report - written in the key's language. The companions exist so that the finished key is not a black box: each choice made between the source pages and the final file is recorded with its reasoning, and each can be disputed by an expert without rerunning anything.
 
-The deliverables are the key file and its companion documents - the decisions record for the merge, the updated partition-test tables, the audit findings, the removed-characters list, the round-trip report, and the coverage and redundancy reports - written in the key's language and converted to PDF at the end. The companions exist so that the finished key is not a black box: each choice made between the source pages and the final file is recorded with its reasoning, and each can be disputed by an expert without rerunning anything.
+## 13. What it costs
+
+The first full run of this pipeline on the Norwegian rodents (29 species on the list, 24 covered, five scanned books and one transcoded matrix key, October 2026) took 93 minutes and about 120 US dollars on Claude Opus 5.5. Almost all of that was input: 229 million tokens of context re-read across 1 681 model calls, because every agent re-reads its whole context on every call. The output - everything the agents actually wrote - was 2 percent of the bill. The changes described above (small per-species files instead of sections, claims instead of books for the digitizer, figure crops instead of pages, a shared cache prefix across agents, scripts instead of model passes wherever a step can be measured) target exactly that re-reading.

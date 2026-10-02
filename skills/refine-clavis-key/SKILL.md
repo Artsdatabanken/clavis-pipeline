@@ -33,6 +33,10 @@ When extending: build the *narrow* script first (cheapest), then *apply*, then w
 
 Each phase's output is the next phase's input. **Order matters.** Taxonomy operations come last because earlier passes shift which assertions belong at which level: a hoisted statement could be stranded after a state split or character merge moves the assertion's centre of gravity.
 
+### Phase 0 — Couplets: one path per taxon
+
+A transcoded dichotomous key encodes couplet steps as characters whose states are whole sentences. Decompose them **per taxon along its own path through the key**: for each taxon, collect the couplet halves it passed through, split each half into its single-trait assertions, and only then build characters from the assertions. Combining couplets by text across taxa (all "size" clauses from every step into one character) widens measurement ranges beyond what the source says for any one taxon; the rodent run had to redo the artfakta key for exactly this. Measurements from couplets become numerical characters with the taxon's own range.
+
 ### Phase 1 — Character-title merge (script only)
 
 > **Two cautions when the input is a cross-source merge rather than one

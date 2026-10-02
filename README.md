@@ -36,13 +36,14 @@ The steps, in the order they run:
 
 | Step | Skill | What it does |
 |---|---|---|
-| 1 | `build-clavis-key` | Orchestrates everything below for a target taxon and a folder of sources. Builds the species list (Norway: NorTaxa plus the alien-species list), then runs one digitizer per source, one audit per draft, then merge and verify. |
-| 2 | `digitize-clavis-key` | One source in, one draft key out. Splits bundled prose into single-trait characters, makes states a clean partition, bins measurements with units, scores frequencies, hoists shared traits to the parent taxon, mines descriptions for extra discriminators. Writes a decisions document alongside. |
-| 3 | `audit-clavis-key` | Fresh agent checks a draft against its source. Deterministic verifier first (`tools/verify.py`), then overlap and gap tests, numeric-anchor checks, source-coverage spot check. Writes a corrected key as a new version, never overwrites. |
-| 4 | `refine-clavis-key` | Structural cleanup of a key that came from a transcoder (matrix export, web scrape). Merges duplicate characters, splits bundled states, infers hierarchy, hoists statements. Needs no source material. |
-| 5 | `merge-clavis-keys` | Combines several audited keys into one. Union first (equal weight per source), taxonomy from the register, intersection-first conflict handling, source-weighted frequencies on real disagreement, redundancy-based state coarsening, and a round-trip check that every claim from every source survives. |
-| 6 | `harvest-claims` | Lists every observable claim a source makes, one per taxon, with quote and page, into `claims.jsonl`. Runs before digitization; digitization scores from it and records provenance; the audit and the final gate check both directions: every statement traces to a claim, every claim reached the key or was deliberately skipped. |
-| 7 | `translate-json` | Adds a language to any JSON file with language-keyed strings. Scripts extract and splice; the model only translates. Optional glossary, reference texts and a vernacular-name adapter that looks names up in taxonomic registers instead of translating them. |
+| 1 | `build-clavis-key` | Orchestrates everything below for a target taxon and a folder of sources. Species list through an adapter (Norway: NorTaxa plus the alien-species list), one preparation per source, one harvester per taxon per source, one digitizer per source, one fresh auditor per draft, merge, determinability pass, then the gate loop and the cost report. |
+| 2 | `harvest-claims` | Prepares a source (text once, each taxon's pages, the figures as crops) and lists every observable claim per taxon with quote and page into `claims.jsonl`; numbers and units parsed, duplicates removed. Checks a finished key in both directions: every statement traces to a claim, every claim reached the key or a skipped list. |
+| 3 | `digitize-clavis-key` | One source's claims in, one key out. Designs single-trait characters with determinable states and numerical characters for every measurement; a script scores the statements from the claims with provenance; flat taxon list. |
+| 4 | `audit-clavis-key` | Fresh agent: verifier, claims audit, range checks, coverage test, then partition, type and determinability review on the flagged rows only; loops on fixes until every check is at zero. |
+| 5 | `refine-clavis-key` | Structural cleanup of a key from a transcoder (matrix export, web scrape): couplets decomposed per taxon along its path, duplicate characters merged, bundled states split, bins to numerical characters. |
+| 6 | `merge-clavis-keys` | Union first (equal weight per source), one spec file for the concordance and per-source state maps, intersection-first reconciliation with every asserted value kept, ranges unioned, hierarchy from the register, measured location cleanup and coarsening, zero-loss round-trip. |
+| 7 | `determinability-pass` | Fresh agent on the merged key: a script flags comparatives, bundles, relative words and over-fine palettes; the agent makes every state answerable by one person with one specimen and the guide; the gate proves no pair lost its last route. |
+| 8 | `translate-json` | Adds a language to any JSON file with language-keyed strings. Scripts extract and splice; the model only translates; vernacular names come from registers. |
 
 Each skill is self-contained: the SKILL.md names every script it uses by path relative to its own folder, and every script is plain Python 3 with command-line help.
 
@@ -98,7 +99,7 @@ Python 3.11 or newer on Linux, macOS or Windows. `pip install -r requirements.tx
 
 ## Output
 
-Every run produces a Clavis JSON file validated against `schema/Clavis.json`, plus companion documents: a decisions record, the partition-test tables, audit findings, and for merges the removed-characters list, round-trip report, and coverage and redundancy reports. The key is meant as an expert-editable draft. Open it in the [Clavis editor](https://clavis.no) or any viewer that reads the format.
+Every run produces a Clavis JSON file validated against `schema/Clavis.json`, with measurements as numerical characters (`[min, max]` per taxon), no zero-frequency statements on exclusive characters, and a gate report with numbers: verifier, ranges, claims audit per source, round-trip, redundancy, geography, coverage, tokens and cost. Companions: the decisions record, audit findings, removed characters, round-trip, redundancy and coverage reports. The key is meant as an expert-editable draft; every statement can be traced to a quoted passage. Open it in the [Clavis editor](https://clavis.no) or any viewer that reads the format.
 
 ## Sources stay out of this repository
 
